@@ -12,6 +12,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Fix permissions on Server
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          sudo chown -R ec2-user:ec2-user /home/ec2-user/flatmate || true
+
     - name: Deploy Code via SCP
       uses: appleboy/scp-action@master
       with:
