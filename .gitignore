@@ -1,0 +1,37 @@
+# Environment & Secrets - NEVER commit these
+.env
+*.pem
+*-key.pem
+*-ascii.pem
+application-local.yml
+
+# Maven build output
+target/
+*.class
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+build_fail*.log
+run_error.log
+startup_error.log
+
+# Docker artifacts
+deploy_payload.zip
+
+# Spring Boot
+spring-shell.log
+
+# Deployment scripts with credentials
+deploy_new_account.ps1
+

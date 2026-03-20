@@ -1,0 +1,51 @@
+package com.flatmate.app.auth;
+
+import lombok.*;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
+
+import java.util.Set;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@DynamoDbBean
+public class User {
+
+    private String userId;
+    private String phone;
+    private String email;
+    private String password;
+    private String googleId;
+    private String appleId;
+    private String name;
+    private String profilePic;
+    private String bio;
+    private Set<String> roles;
+    private boolean isPremium;
+
+    // Onboarding fields
+    private boolean onboardingComplete; // true once user selects SEEKER or OWNER
+    private String roleConfirmedAt; // ISO timestamp when role was confirmed
+    private boolean ownerOnboardingComplete; // true once owner creates their first listing
+
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("PK")
+    public String getPk() {
+        return "USER#" + userId;
+    }
+
+    public void setPk(String pk) {
+        // Required for DynamoDB Mapper
+    }
+
+    @DynamoDbSortKey
+    @DynamoDbAttribute("SK")
+    public String getSk() {
+        return "METADATA";
+    }
+
+    public void setSk(String sk) {
+        // Required for DynamoDB Mapper
+    }
+}

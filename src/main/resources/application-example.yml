@@ -1,0 +1,39 @@
+# Copy this file to application-local.yml and fill in your values
+# application-local.yml is gitignored — never commit real credentials
+
+spring:
+  application:
+    name: flatmate-app
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8081
+
+aws:
+  region: ap-south-1
+  access-key: YOUR_AWS_ACCESS_KEY_ID_HERE
+  secret-key: YOUR_AWS_SECRET_ACCESS_KEY_HERE
+  dynamodb:
+    table-name: FlatmateData
+  s3:
+    bucket: flatmate-photos
+
+razorpay:
+  key-id: YOUR_RAZORPAY_KEY_ID
+  key-secret: YOUR_RAZORPAY_KEY_SECRET
+
+google:
+  client-id: YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+  client-secret: YOUR_GOOGLE_CLIENT_SECRET
+
+jwt:
+  secret: YourSuperSecretKeyAtLeast32CharactersLong
+  access-token-expiry-hours: 24
+  refresh-token-expiry-days: 60
+
+logging:
+  level:
+    com.flatmate.app: DEBUG

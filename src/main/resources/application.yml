@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: flatmate-app
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8081
+
+# DynamoDB / AWS Configuration
+aws:
+  region: ${AWS_REGION:ap-south-1}
+  access-key: ${AWS_ACCESS_KEY_ID}
+  secret-key: ${AWS_SECRET_ACCESS_KEY}
+  dynamodb:
+    table-name: ${DYNAMODB_TABLE_NAME:FlatmateData}
+  s3:
+    bucket: ${S3_BUCKET:flatmate-photos}
+
+# Razorpay Configuration
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+
+# Google Auth Configuration
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+  client-secret: ${GOOGLE_CLIENT_SECRET}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiry-hours: ${JWT_ACCESS_EXPIRY_HOURS:24}
+  refresh-token-expiry-days: ${JWT_REFRESH_EXPIRY_DAYS:60}
+
+logging:
+  level:
+    com.flatmate.app: DEBUG

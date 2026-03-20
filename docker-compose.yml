@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    image: flatmate-app:latest
+    container_name: flatmate-backend
+    ports:
+      - "8081:8081"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME:-FlatmateData}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # JWT Secrets should be passed as env vars in CI/CD or .env
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+    depends_on:
+      - redis
+    networks:
+      - flatmate-network
+
+  redis:
+    image: redis:alpine
+    container_name: flatmate-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - flatmate-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: flatmate-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - flatmate-network
+
+networks:
+  flatmate-network:
+    driver: bridge
