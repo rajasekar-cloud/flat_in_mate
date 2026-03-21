@@ -20,11 +20,16 @@ target/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs and temporary error files
 *.log
+*.txt
 build_fail*.log
+build_output.txt
 run_error.log
 startup_error.log
+push_err*.txt
+push_error.txt
+err*.txt
 
 # Docker artifacts
 deploy_payload.zip
@@ -34,4 +39,5 @@ spring-shell.log
 
 # Deployment scripts with credentials
 deploy_new_account.ps1
-
+deploy_ec2.ps1
+deploy_to_ec2.sh
