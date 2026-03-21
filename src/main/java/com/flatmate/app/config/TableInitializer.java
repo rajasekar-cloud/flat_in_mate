@@ -1,13 +1,6 @@
 package com.flatmate.app.config;
 
 import com.flatmate.app.auth.User;
-import com.flatmate.app.chat.Message;
-import com.flatmate.app.listing.Listing;
-import com.flatmate.app.location.GeoListing;
-import com.flatmate.app.match.Match;
-import com.flatmate.app.notification.DeviceToken;
-import com.flatmate.app.payment.Subscription;
-import com.flatmate.app.user.GlobalCounter;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
