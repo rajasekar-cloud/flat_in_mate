@@ -1,11 +1,11 @@
 {
   "info": {
-    "name": "FlatMate App API — v3",
-    "description": "Complete API collection. Base URL: http://localhost:8081. Set 'token' variable after login.",
+    "name": "FlatMate App API — v4",
+    "description": "Complete API collection. Base URL: https://13.127.30.77 (live) or http://localhost:8081 (local). Set 'token' variable after login. Disable SSL verification in Postman settings for the live server.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",   "value": "http://localhost:8081" },
+    { "key": "baseUrl",   "value": "http://localhost:8081",   "description": "Change to https://13.127.30.77 for live server" },
     { "key": "token",     "value": "<paste accessToken here after login>" },
     { "key": "userId",    "value": "user_001" },
     { "key": "ownerId",   "value": "owner_001" },
@@ -33,7 +33,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] },
             "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}" },
-            "description": "Returns { accessToken, refreshToken, userId, isNewUser }. If isNewUser=true call Set Role next."
+            "description": "Returns { accessToken, refreshToken, userId, isNewUser }.\nIf isNewUser=true → call Set Role next.\nIf isNewUser=false → user already onboarded, go to home."
           }
         },
         {
@@ -63,12 +63,12 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": { "raw": "{{baseUrl}}/auth/set-role", "host": ["{{baseUrl}}"], "path": ["auth", "set-role"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"OWNER\"\n}" },
-            "description": "Call after login if isNewUser=true. role = SEEKER or OWNER. Tracks role history if switching."
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"SEEKER\"\n}" },
+            "description": "Call after login if isNewUser=true.\nrole = SEEKER → show seeker onboarding\nrole = OWNER  → show owner listing form"
           }
         },
         {
-          "name": "6. Refresh Access Token ⭐",
+          "name": "6. Refresh Access Token",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -79,10 +79,10 @@
       ]
     },
     {
-      "name": "👤 User Profile",
+      "name": "👤 Profile — Basic Info (All Users)",
       "item": [
         {
-          "name": "Get Profile",
+          "name": "1. Get Profile",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -90,7 +90,7 @@
           }
         },
         {
-          "name": "Update Profile",
+          "name": "2. Update Basic Info (Step 1 — All Users)",
           "request": {
             "method": "POST",
             "header": [
@@ -98,19 +98,44 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi@example.com\",\n  \"phone\": \"+919876543210\",\n  \"bio\": \"Looking for a flat near Koramangala.\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate/profiles/user_001.jpg\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\"\n}"
+            },
+            "description": "Step 1 for both SEEKER and OWNER after role selection."
           }
         },
         {
-          "name": "Register as Owner",
+          "name": "3. Upload Profile Photo → Get S3 URL",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=profile_photo.jpg",
+              "host": ["{{baseUrl}}"],
+              "path": ["listings", "{{listingId}}", "upload-url"],
+              "query": [{ "key": "fileName", "value": "profile_photo.jpg" }]
+            },
+            "description": "Get a pre-signed S3 URL. Then PUT the image bytes directly to that URL. Then set profilePic in Update Basic Info."
+          }
+        },
+        {
+          "name": "4. Update Profile Photo URL",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/owner", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "owner"] }
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile_photo.jpg\"\n}"
+            }
           }
         },
         {
-          "name": "Get Role Change History ⭐",
+          "name": "5. Get Role History",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -120,10 +145,93 @@
       ]
     },
     {
-      "name": "🏠 Listings",
+      "name": "🔍 Seeker Onboarding (Tenant Only)",
       "item": [
         {
-          "name": "1. Publish Listing (Min 5 Photos) ⭐ FULL FORM",
+          "name": "1. Save Location (Map Pin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
+            },
+            "description": "User drags map pin to their current location. Save lat/lng and formatted address."
+          }
+        },
+        {
+          "name": "2. Save Education & Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "3. Save Languages",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"]\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "4. Save Lifestyle Preferences",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "smokingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\ndrinkingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\nfoodHabit: NON_VEGETARIAN | VEGETARIAN | EGGETARIAN | VEGAN | PESCATARIAN\nmaritalStatus: SINGLE | SINGLE_KIDS | DIVORCED | DIVORCED_KIDS | WIDOWED | WIDOWED_KIDS | SEPARATED | SEPARATED_KIDS\npetHabit: HAS_PETS | NO_PETS"
+          }
+        },
+        {
+          "name": "5. Save Full Seeker Profile (All at once)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile.jpg\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\",\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"],\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\",\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏠 Owner — Listing APIs",
+      "item": [
+        {
+          "name": "1. Publish Listing (Full — 11 Steps)",
           "request": {
             "method": "POST",
             "header": [
@@ -133,13 +241,12 @@
             "url": { "raw": "{{baseUrl}}/listings", "host": ["{{baseUrl}}"], "path": ["listings"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"PRIVATE_ROOM\",\n\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"FULLY_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyOnFloor\": \"FIRST\",\n  \"floorPlan\": \"2BHK\",\n  \"floorType\": \"SINGLE\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"1_5_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"showPreciseLocation\": false,\n  \"country\": \"India\",\n  \"flatHouseDetails\": \"Flat 4B\",\n  \"streetAddress\": \"Akshya Nagar 1st Block 1st Cross\",\n  \"landmark\": \"Near Rammurthy Nagar Bus Stop\",\n  \"district\": \"Rammurthy Nagar\",\n  \"pinCode\": \"560016\",\n  \"city\": \"Bangalore\",\n\n  \"bathroomType\": \"ATTACHED\",\n  \"occupantType\": \"ONLY_ME\",\n\n  \"lights\": 4,\n  \"fans\": 3,\n  \"ac\": 2,\n  \"tv\": 1,\n  \"beds\": 2,\n  \"wardrobes\": 2,\n  \"geysers\": 1,\n  \"amenities\": [\"Wifi\", \"Sofa\", \"Washing Machine\", \"Stove\", \"Water Purifier\", \"Dining Table\"],\n  \"customAmenities\": [\"Study Table\", \"Curtains\"],\n  \"description\": \"Spacious 2BHK. Quiet gated society. 24x7 water supply.\",\n\n  \"petsAllowed\": false,\n  \"drinkingAllowed\": false,\n  \"smokingAllowed\": false,\n  \"powerBackup\": true,\n\n  \"photos\": [\n    \"https://s3.ap-south-1.amazonaws.com/flatmate/l1/p1.jpg\",\n    \"https://s3.ap-south-1.amazonaws.com/flatmate/l1/p2.jpg\",\n    \"https://s3.ap-south-1.amazonaws.com/flatmate/l1/p3.jpg\",\n    \"https://s3.ap-south-1.amazonaws.com/flatmate/l1/p4.jpg\",\n    \"https://s3.ap-south-1.amazonaws.com/flatmate/l1/p5.jpg\"\n  ],\n\n  \"rent\": 15000,\n  \"minRent\": 12000,\n  \"maxRent\": 18000,\n  \"noticePeriod\": \"2_MONTHS\",\n\n  \"genderPreference\": \"ANY\",\n  \"roomsAvailable\": 1,\n  \"occupancy\": 2\n}"
-            },
-            "description": "Requires min 5 photos. advanceAmount (=10x rent) is auto-calculated by backend. ownerOnboardingComplete set to true."
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"A_ROOM\",\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"SEMI_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyFloor\": \"FIRST_FLOOR\",\n  \"bhkType\": \"2BHK\",\n  \"floorType\": \"SINGLE_FLOOR\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"0_TO_1_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n  \"addressLine1\": \"Akshya Nagar 1st Block 1st Cross\",\n  \"area\": \"Rammurthy nagar\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560016\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"bathroomType\": \"ATTACHED\",\n  \"amenities\": [\"WiFi\", \"AC\", \"Washing Machine\"],\n  \"coOccupants\": \"MALE_ONLY\",\n  \"houseRules\": \"No parties. No smoking inside.\",\n  \"photos\": [\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_1.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_2.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_3.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_4.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_5.jpg\"\n  ],\n  \"monthlyRent\": 15000,\n  \"maintenanceCharges\": 500,\n  \"noticePeriodMonths\": 2\n}"
+            }
           }
         },
         {
-          "name": "2. Save as Draft ⭐",
+          "name": "2. Save Draft Listing",
           "request": {
             "method": "POST",
             "header": [
@@ -147,12 +254,28 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": { "raw": "{{baseUrl}}/listings/draft", "host": ["{{baseUrl}}"], "path": ["listings", "draft"] },
-            "body": { "mode": "raw", "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"city\": \"Bangalore\",\n  \"availableFrom\": \"2026-04-01\"\n}" },
-            "description": "No photo validation. Saves with status=DRAFT."
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"monthlyRent\": 15000\n}"
+            }
           }
         },
         {
-          "name": "3. Update Listing ⭐",
+          "name": "3. Get Photo/Video Upload URL",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=photo_1.jpg",
+              "host": ["{{baseUrl}}"],
+              "path": ["listings", "{{listingId}}", "upload-url"],
+              "query": [{ "key": "fileName", "value": "photo_1.jpg" }]
+            },
+            "description": "Step 1: Call this per photo (5 times for 5 photos). Returns { uploadUrl, filePath }.\nStep 2: PUT photo bytes directly to uploadUrl (no auth header needed).\nStep 3: Include all filePaths in 'photos' array when publishing listing."
+          }
+        },
+        {
+          "name": "4. Update Listing",
           "request": {
             "method": "PUT",
             "header": [
@@ -160,16 +283,7 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] },
-            "body": { "mode": "raw", "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"rent\": 17000,\n  \"petsAllowed\": true,\n  \"description\": \"Updated after renovation.\"\n}" }
-          }
-        },
-        {
-          "name": "4. Deactivate Listing (Soft Delete) ⭐",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] },
-            "description": "Sets status=DEACTIVATED. Does not delete from DynamoDB."
+            "body": { "mode": "raw", "raw": "{\n  \"monthlyRent\": 16000,\n  \"houseRules\": \"Updated rules\"\n}" }
           }
         },
         {
@@ -181,7 +295,7 @@
           }
         },
         {
-          "name": "6. Get Listing by ID",
+          "name": "6. Get Single Listing",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -189,7 +303,7 @@
           }
         },
         {
-          "name": "7. Get My Listings (by Owner) ⭐",
+          "name": "7. Get Owner's Listings",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -197,70 +311,65 @@
           }
         },
         {
-          "name": "8. Get Upload URL — Photo (JPEG/PNG/HEIC)",
+          "name": "8. Deactivate Listing",
           "request": {
-            "method": "GET",
+            "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=photo1.jpg", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}", "upload-url"], "query": [{ "key": "fileName", "value": "photo1.jpg" }] }
-          }
-        },
-        {
-          "name": "9. Get Upload URL — Video Tour (MP4/MOV)",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=tour.mp4", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}", "upload-url"], "query": [{ "key": "fileName", "value": "tour.mp4" }] }
+            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] }
           }
         }
       ]
     },
     {
-      "name": "📍 Location",
+      "name": "📍 Location / Nearby Search",
       "item": [
         {
-          "name": "Index Listing (Geo)",
+          "name": "1. Find Nearby Listings (GPS)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/listings/nearby?lat=12.9716&lng=77.5946&radiusKm=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["listings", "nearby"],
+              "query": [
+                { "key": "lat", "value": "12.9716" },
+                { "key": "lng", "value": "77.5946" },
+                { "key": "radiusKm", "value": "5" }
+              ]
+            },
+            "description": "Returns listings within the given radius from the seeker's GPS coordinates."
+          }
+        }
+      ]
+    },
+    {
+      "name": "💬 Chat",
+      "item": [
+        {
+          "name": "1. Send Message",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
-            "url": { "raw": "{{baseUrl}}/location/index", "host": ["{{baseUrl}}"], "path": ["location", "index"] },
-            "body": { "mode": "raw", "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946\n}" }
+            "url": { "raw": "{{baseUrl}}/chat/send", "host": ["{{baseUrl}}"], "path": ["chat", "send"] },
+            "body": { "mode": "raw", "raw": "{\n  \"senderId\": \"{{userId}}\",\n  \"receiverId\": \"other_user_id\",\n  \"content\": \"Hi, is the flat still available?\"\n}" }
           }
         },
         {
-          "name": "Find Nearby Listings (GPS only)",
+          "name": "2. Get Chat History",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
-              "raw": "{{baseUrl}}/location/nearby?lat=12.9716&lng=77.5946&radius=10.0",
-              "host": ["{{baseUrl}}"], "path": ["location", "nearby"],
+              "raw": "{{baseUrl}}/chat/history?user1={{userId}}&user2=other_user_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "history"],
               "query": [
-                { "key": "lat", "value": "12.9716" },
-                { "key": "lng", "value": "77.5946" },
-                { "key": "radius", "value": "10.0" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Find Nearby Listings (With Filters) ⭐",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/location/nearby?lat=12.9716&lng=77.5946&radius=15.0&minRent=8000&maxRent=20000&genderPreference=ANY&minRooms=1",
-              "host": ["{{baseUrl}}"], "path": ["location", "nearby"],
-              "query": [
-                { "key": "lat", "value": "12.9716" },
-                { "key": "lng", "value": "77.5946" },
-                { "key": "radius", "value": "15.0" },
-                { "key": "minRent", "value": "8000" },
-                { "key": "maxRent", "value": "20000" },
-                { "key": "genderPreference", "value": "ANY" },
-                { "key": "minRooms", "value": "1" }
+                { "key": "user1", "value": "{{userId}}" },
+                { "key": "user2", "value": "other_user_id" }
               ]
             }
           }
@@ -268,10 +377,10 @@
       ]
     },
     {
-      "name": "👍 Swipe",
+      "name": "❤️ Swipe & Match",
       "item": [
         {
-          "name": "Record Swipe",
+          "name": "1. Swipe on Listing",
           "request": {
             "method": "POST",
             "header": [
@@ -279,29 +388,11 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": { "raw": "{{baseUrl}}/swipes", "host": ["{{baseUrl}}"], "path": ["swipes"] },
-            "body": { "mode": "raw", "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"listingId\": \"{{listingId}}\",\n  \"type\": \"RIGHT\"\n}" },
-            "description": "type: RIGHT (interested) or LEFT. Free users: 3/day and 12 total."
-          }
-        }
-      ]
-    },
-    {
-      "name": "🤝 Matches",
-      "item": [
-        {
-          "name": "Approve Match",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "url": { "raw": "{{baseUrl}}/matches/approve", "host": ["{{baseUrl}}"], "path": ["matches", "approve"] },
-            "body": { "mode": "raw", "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"ownerId\": \"{{ownerId}}\"\n}" }
+            "body": { "mode": "raw", "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"listingId\": \"{{listingId}}\",\n  \"direction\": \"RIGHT\"\n}" }
           }
         },
         {
-          "name": "Get My Matches",
+          "name": "2. Get Matches",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -311,122 +402,18 @@
       ]
     },
     {
-      "name": "💬 Chat (REST)",
-      "item": [
-        {
-          "name": "Get Chat History",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/chat/{{matchId}}/history", "host": ["{{baseUrl}}"], "path": ["chat", "{{matchId}}", "history"] }
-          }
-        },
-        {
-          "name": "Mark as Read",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "url": { "raw": "{{baseUrl}}/chat/read", "host": ["{{baseUrl}}"], "path": ["chat", "read"] },
-            "body": { "mode": "raw", "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"role\": \"SEEKER\"\n}" }
-          }
-        },
-        {
-          "name": "Get Chat Media Upload URL",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/chat/upload-url?fileName=image.jpg", "host": ["{{baseUrl}}"], "path": ["chat", "upload-url"], "query": [{ "key": "fileName", "value": "image.jpg" }] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "💬 Chat (WebSocket — STOMP)",
-      "description": "Connect: ws://localhost:8081/chat-socket. Subscribe: /topic/match/{matchId}",
-      "item": [
-        {
-          "name": "WS — Send Message [/app/chat]",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/app/chat", "host": ["{{baseUrl}}"], "path": ["app", "chat"] },
-            "body": { "mode": "raw", "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"senderId\": \"{{seekerId}}\",\n  \"content\": \"Hi! Interested in your flat.\",\n  \"type\": \"TEXT\"\n}" },
-            "description": "STOMP WebSocket — not regular HTTP."
-          }
-        },
-        {
-          "name": "WS — Typing Indicator [/app/chat/typing]",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/app/chat/typing", "host": ["{{baseUrl}}"], "path": ["app", "chat", "typing"] },
-            "body": { "mode": "raw", "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"senderId\": \"{{seekerId}}\",\n  \"isTyping\": \"true\"\n}" }
-          }
-        }
-      ]
-    },
-    {
       "name": "🔔 Notifications",
       "item": [
         {
-          "name": "Register FCM Token",
+          "name": "1. Register Device Token",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
-            "url": { "raw": "{{baseUrl}}/notifications/token", "host": ["{{baseUrl}}"], "path": ["notifications", "token"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"fcm-device-token-abc123\"\n}" }
-          }
-        },
-        {
-          "name": "Send Notification",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "url": { "raw": "{{baseUrl}}/notifications/send", "host": ["{{baseUrl}}"], "path": ["notifications", "send"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"title\": \"New Match!\",\n  \"body\": \"Someone is interested in your flat.\"\n}" }
-          }
-        },
-        {
-          "name": "Get Inbox",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications/inbox/{{userId}}", "host": ["{{baseUrl}}"], "path": ["notifications", "inbox", "{{userId}}"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "💳 Payments",
-      "item": [
-        {
-          "name": "Subscribe",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "url": { "raw": "{{baseUrl}}/payments/subscribe", "host": ["{{baseUrl}}"], "path": ["payments", "subscribe"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"planId\": \"PREMIUM_MONTHLY\"\n}" }
-          }
-        },
-        {
-          "name": "Razorpay Webhook",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/payments/webhook", "host": ["{{baseUrl}}"], "path": ["payments", "webhook"] },
-            "body": { "mode": "raw", "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": { \"payment\": { \"entity\": { \"id\": \"pay_abc123\", \"amount\": 49900 } } }\n}" }
+            "url": { "raw": "{{baseUrl}}/notifications/device-token", "host": ["{{baseUrl}}"], "path": ["notifications", "device-token"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"<FCM_DEVICE_TOKEN>\",\n  \"platform\": \"ANDROID\"\n}" }
           }
         }
       ]

@@ -3,6 +3,9 @@ package com.flatmate.app.auth;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
+import com.flatmate.app.user.SeekerProfile;
+import com.flatmate.app.user.enums.Gender;
+
 import java.util.Set;
 
 @Data
@@ -18,7 +21,19 @@ public class User {
     private String password;
     private String googleId;
     private String appleId;
+    
+    // Legacy mapping or full name
     private String name;
+    
+    // New Basic Info
+    private String firstName;
+    private String lastName;
+    private String dateOfBirth; // YYYY-MM-DD
+    private Gender gender;
+
+    // Profile specifics
+    private SeekerProfile seekerProfile;
+    
     private String profilePic;
     private String bio;
     private Set<String> roles;
