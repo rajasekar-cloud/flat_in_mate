@@ -12,12 +12,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Pre-flight Check (Verify Secrets)
+      run: |
+        echo "Checking required secrets..."
+        vars=("EC2_HOST" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME")
+        for var in "${vars[@]}"; do
+          if [ -z "${!var}" ]; then
+            echo "::error::Secret $var is MISSING! Please add it to Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+        done
+        echo "All critical secrets are present."
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        DYNAMODB_TABLE_NAME: ${{ secrets.DYNAMODB_TABLE_NAME }}
+
     - name: Prepare Server (Clean old code)
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        debug: true
         script: |
           sudo chown -R ec2-user:ec2-user /home/ec2-user/flatmate || true
           sudo rm -rf /home/ec2-user/flatmate/src
@@ -31,6 +52,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        debug: true
         source: "Dockerfile,docker-compose.yml,nginx/,pom.xml,src/"
         target: "/home/ec2-user/flatmate/"
         strip_components: 0
