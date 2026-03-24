@@ -14,15 +14,16 @@ jobs:
 
     - name: Pre-flight Check (Verify Secrets)
       run: |
-        echo "Checking required secrets..."
-        vars=("EC2_HOST" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET")
-        for var in "${vars[@]}"; do
-          if [ -z "${!var}" ]; then
-            echo "::error::Secret $var is MISSING! Please add it to Settings -> Secrets and variables -> Actions."
+        echo ">>> Starting Secret Verification..."
+        REQUIRED_VARS=("EC2_HOST" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET")
+        for var_name in "${REQUIRED_VARS[@]}"; do
+          echo "Checking $var_name..."
+          if [ -z "${!var_name}" ]; then
+            echo "::error::[FAILURE] Secret '$var_name' is empty or missing! Please add it to GitHub Settings."
             exit 1
           fi
         done
-        echo "All critical secrets are present."
+        echo "✅ All required secrets are verified and present."
       env:
         EC2_HOST: ${{ secrets.EC2_HOST }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
