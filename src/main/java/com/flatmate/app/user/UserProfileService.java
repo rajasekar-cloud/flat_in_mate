@@ -30,9 +30,29 @@ public class UserProfileService {
         if (profileUpdates.getBio() != null) existingUser.setBio(profileUpdates.getBio());
         if (profileUpdates.getName() != null) existingUser.setName(profileUpdates.getName()); // Legacy fallback
         
-        // Seeker Profile Updates
+        // Seeker Profile Updates (Deep Partial Update)
         if (profileUpdates.getSeekerProfile() != null) {
-            existingUser.setSeekerProfile(profileUpdates.getSeekerProfile());
+            if (existingUser.getSeekerProfile() == null) {
+                existingUser.setSeekerProfile(profileUpdates.getSeekerProfile());
+            } else {
+                SeekerProfile existingSeeker = existingUser.getSeekerProfile();
+                SeekerProfile newSeeker = profileUpdates.getSeekerProfile();
+                
+                if (newSeeker.getEducation() != null) existingSeeker.setEducation(newSeeker.getEducation());
+                if (newSeeker.getJobTitle() != null) existingSeeker.setJobTitle(newSeeker.getJobTitle());
+                if (newSeeker.getCompanyName() != null) existingSeeker.setCompanyName(newSeeker.getCompanyName());
+                if (newSeeker.getKnownLanguages() != null) existingSeeker.setKnownLanguages(newSeeker.getKnownLanguages());
+                
+                // Lifestyle Habits
+                if (newSeeker.getSmokingHabit() != null) existingSeeker.setSmokingHabit(newSeeker.getSmokingHabit());
+                if (newSeeker.getDrinkingHabit() != null) existingSeeker.setDrinkingHabit(newSeeker.getDrinkingHabit());
+                if (newSeeker.getFoodHabit() != null) existingSeeker.setFoodHabit(newSeeker.getFoodHabit());
+                if (newSeeker.getMaritalStatus() != null) existingSeeker.setMaritalStatus(newSeeker.getMaritalStatus());
+                if (newSeeker.getPetHabit() != null) existingSeeker.setPetHabit(newSeeker.getPetHabit());
+                
+                // Location
+                if (newSeeker.getLocation() != null) existingSeeker.setLocation(newSeeker.getLocation());
+            }
         }
 
         userRepository.save(existingUser);
