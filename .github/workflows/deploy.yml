@@ -44,7 +44,16 @@ jobs:
         script: |
           cd /home/ec2-user/flatmate
           
-          # Inject environment variables from GitHub Secrets
+          # 1. Stop docker immediately so port 80 is free for Certbot standalone validation
+          sudo docker compose down || true
+
+          # 2. Install certbot
+          sudo dnf install -y certbot || true
+
+          # 3. Request or renew free Let's Encrypt certificate
+          sudo certbot certonly --standalone -d flatmate-api.duckdns.org --non-interactive --agree-tos -m admin@flatmate-api.duckdns.org --keep-until-expiring
+
+          # 4. Inject environment variables from GitHub Secrets
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" > .env
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env

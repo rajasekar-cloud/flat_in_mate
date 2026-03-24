@@ -5,7 +5,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",   "value": "http://localhost:8081",   "description": "Change to https://13.127.30.77 for live server" },
+    { "key": "baseUrl",   "value": "https://flatmate-api.duckdns.org", "description": "Live DuckDNS Server with SSL" },
     { "key": "token",     "value": "<paste accessToken here after login>" },
     { "key": "userId",    "value": "user_001" },
     { "key": "ownerId",   "value": "owner_001" },
