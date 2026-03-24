@@ -82,17 +82,10 @@ jobs:
           set -e
           cd /home/ec2-user/flatmate
           
-          echo ">>> 1. Stopping existing containers to free Port 80..."
+          echo ">>> 1. Stopping existing containers..."
           sudo docker compose down --remove-orphans || true
 
-          echo ">>> 2. Ensuring Certbot is installed..."
-          sudo dnf install -y certbot || true
-
-          echo ">>> 3. Requesting/Renewing SSL Certificate..."
-          # Running with -v to see detailed output if it fails
-          sudo certbot certonly --standalone -d flatmate-api.duckdns.org --non-interactive --agree-tos -m admin@flatmate-api.duckdns.org --keep-until-expiring -v
-
-          echo ">>> 4. Creating/Updating .env file..."
+          echo ">>> 2. Creating/Updating .env file..."
           cat <<EOF > .env
           AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -105,12 +98,11 @@ jobs:
           RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
           EOF
 
-          echo ">>> 5. Building and starting new containers..."
-          # Using direct docker build to avoid buildx version issues on AL2023
+          echo ">>> 3. Building and starting new containers..."
           sudo docker build -t flatmate-app:latest .
           sudo docker compose up -d
 
-          echo ">>> 6. Cleanup old images..."
+          echo ">>> 4. Cleanup old images..."
           sudo docker system prune -f
           
           echo ">>> DEPLOYMENT SUCCESSFUL! Validating Nginx..."
