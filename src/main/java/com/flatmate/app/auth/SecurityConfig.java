@@ -24,6 +24,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints — no token required
                         .requestMatchers(
+                                "/health",
                                 "/auth/otp/send",
                                 "/auth/otp/verify",
                                 "/auth/social/google",
