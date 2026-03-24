@@ -97,7 +97,8 @@ jobs:
           EOF
 
           echo ">>> 5. Building and starting new containers..."
-          sudo docker compose build
+          # Using direct docker build to avoid buildx version issues on AL2023
+          sudo docker build -t flatmate-app:latest .
           sudo docker compose up -d
 
           echo ">>> 6. Cleanup old images..."
