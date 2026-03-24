@@ -41,30 +41,40 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        debug: true
         script: |
+          set -e
           cd /home/ec2-user/flatmate
           
-          # 1. Stop docker immediately so port 80 is free for Certbot standalone validation
-          sudo docker compose down || true
+          echo ">>> 1. Stopping existing containers to free Port 80..."
+          sudo docker compose down --remove-orphans || true
 
-          # 2. Install certbot
+          echo ">>> 2. Ensuring Certbot is installed..."
           sudo dnf install -y certbot || true
 
-          # 3. Request or renew free Let's Encrypt certificate
-          sudo certbot certonly --standalone -d flatmate-api.duckdns.org --non-interactive --agree-tos -m admin@flatmate-api.duckdns.org --keep-until-expiring
+          echo ">>> 3. Requesting/Renewing SSL Certificate..."
+          # Running with -v to see detailed output if it fails
+          sudo certbot certonly --standalone -d flatmate-api.duckdns.org --non-interactive --agree-tos -m admin@flatmate-api.duckdns.org --keep-until-expiring -v
 
-          # 4. Inject environment variables from GitHub Secrets
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" > .env
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "DYNAMODB_TABLE_NAME=${{ secrets.DYNAMODB_TABLE_NAME }}" >> .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}" >> .env
-          echo "RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}" >> .env
+          echo ">>> 4. Creating/Updating .env file..."
+          cat <<EOF > .env
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          DYNAMODB_TABLE_NAME=${{ secrets.DYNAMODB_TABLE_NAME }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+          EOF
 
-          # Restart containers
-          docker compose build
-          docker compose up -d
-          docker system prune -f
+          echo ">>> 5. Building and starting new containers..."
+          sudo docker compose build
+          sudo docker compose up -d
+
+          echo ">>> 6. Cleanup old images..."
+          sudo docker system prune -f
+          
+          echo ">>> DEPLOYMENT SUCCESSFUL! Validating Nginx..."
+          sudo docker ps | grep nginx
