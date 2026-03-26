@@ -59,7 +59,9 @@ public class AuthService {
 
         Set<String> currentRoles = user.getRoles() != null ? user.getRoles() : new HashSet<>();
 
-        if (!currentRoles.isEmpty()) {
+        boolean roleAlreadyPresent = currentRoles.contains(newRole);
+
+        if (!currentRoles.isEmpty() && !roleAlreadyPresent) {
             String fromRole = currentRoles.contains("OWNER") ? "OWNER" : "SEEKER";
             if (!fromRole.equals(newRole)) {
                 RoleChangeHistory history = RoleChangeHistory.builder()
@@ -75,9 +77,31 @@ public class AuthService {
         currentRoles.add(newRole);
         user.setRoles(currentRoles);
         user.setRoleSelectionComplete(true);
-        user.setOnboardingComplete(false);
+        if (!roleAlreadyPresent) {
+            user.setOnboardingComplete(false);
+        }
+        user.setActiveRole(newRole);
         user.setRoleConfirmedAt(LocalDateTime.now().toString());
         userRepository.save(user);
+    }
+
+    public AuthResponse switchUserRole(String userId, String role) {
+        String targetRole = normalizeRole(role);
+        if (!Set.of("SEEKER", "OWNER").contains(targetRole)) {
+            throw new RuntimeException("Invalid role. Allowed values: SEEKER, OWNER, TENANT, HOST");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Set<String> currentRoles = user.getRoles() != null ? user.getRoles() : Set.of();
+        if (!currentRoles.contains(targetRole)) {
+            throw new RuntimeException("User does not have access to role: " + targetRole);
+        }
+
+        user.setActiveRole(targetRole);
+        userRepository.save(user);
+        return buildAuthResponse(user);
     }
 
     public List<RoleChangeHistory> getRoleHistory(String userId) {
@@ -89,6 +113,7 @@ public class AuthService {
                 .userId(phone)
                 .phone(phone)
                 .roles(null)
+                .activeRole(null)
                 .isPremium(false)
                 .roleSelectionComplete(false)
                 .onboardingComplete(false)
@@ -106,9 +131,30 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .userId(user.getUserId())
+                .roles(user.getRoles())
+                .activeRole(resolveActiveRole(user))
                 .isNewUser(!user.isOnboardingComplete())
+                .onboardingComplete(user.isOnboardingComplete())
                 .accessTokenExpiresIn(24 * 3600L)
                 .build();
+    }
+
+    private String resolveActiveRole(User user) {
+        if (user.getActiveRole() != null && !user.getActiveRole().isBlank()) {
+            return user.getActiveRole();
+        }
+
+        Set<String> roles = user.getRoles();
+        if (roles == null || roles.isEmpty()) {
+            return null;
+        }
+        if (roles.contains("OWNER")) {
+            return "OWNER";
+        }
+        if (roles.contains("SEEKER")) {
+            return "SEEKER";
+        }
+        return null;
     }
 
     private String normalizeRole(String role) {

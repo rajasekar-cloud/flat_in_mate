@@ -35,6 +35,7 @@ public class User {
     private String profilePic;
     private String bio;
     private Set<String> roles;
+    private String activeRole;
     private boolean isPremium;
 
     // Onboarding fields

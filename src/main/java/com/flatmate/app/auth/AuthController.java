@@ -51,4 +51,14 @@ public class AuthController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/switch-role")
+    public ResponseEntity<?> switchRole(@RequestBody Map<String, String> request) {
+        try {
+            AuthResponse response = authService.switchUserRole(request.get("userId"), request.get("role"));
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
