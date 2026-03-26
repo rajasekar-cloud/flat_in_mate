@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -14,14 +13,12 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // ── Send OTP ──────────────────────────────────────────────────────────────
     @PostMapping("/otp/send")
     public ResponseEntity<String> sendOtp(@RequestBody Map<String, String> request) {
         authService.sendOtp(request.get("phone"));
         return ResponseEntity.ok("OTP sent successfully");
     }
 
-    // ── Verify OTP → returns AuthResponse with isNewUser flag ────────────────
     @PostMapping("/otp/verify")
     public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> request) {
         try {
@@ -32,29 +29,6 @@ public class AuthController {
         }
     }
 
-    // ── Google Sign-In ────────────────────────────────────────────────────────
-    @PostMapping("/social/google")
-    public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> request) {
-        try {
-            AuthResponse response = authService.loginWithGoogle(request.get("idToken"));
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    // ── Apple Sign-In ─────────────────────────────────────────────────────────
-    @PostMapping("/social/apple")
-    public ResponseEntity<?> appleLogin(@RequestBody Map<String, String> request) {
-        try {
-            AuthResponse response = authService.loginWithApple(request.get("appleId"), request.get("email"));
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    // ── Refresh Access Token ──────────────────────────────────────────────────
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
         try {
@@ -65,9 +39,6 @@ public class AuthController {
         }
     }
 
-    // ── Set Role (post-login onboarding) ──────────────────────────────────────
-    // Call this after login if isNewUser=true to show "Seeker or Owner?" screen.
-    // Also call this when user wants to switch their role.
     @PostMapping("/set-role")
     public ResponseEntity<?> setRole(@RequestBody Map<String, String> request) {
         try {

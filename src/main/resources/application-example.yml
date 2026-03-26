@@ -25,10 +25,6 @@ razorpay:
   key-id: YOUR_RAZORPAY_KEY_ID
   key-secret: YOUR_RAZORPAY_KEY_SECRET
 
-google:
-  client-id: YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
-  client-secret: YOUR_GOOGLE_CLIENT_SECRET
-
 jwt:
   secret: YourSuperSecretKeyAtLeast32CharactersLong
   access-token-expiry-hours: 24

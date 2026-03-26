@@ -19,8 +19,6 @@ public class User {
     private String phone;
     private String email;
     private String password;
-    private String googleId;
-    private String appleId;
     
     // Legacy mapping or full name
     private String name;
@@ -40,9 +38,15 @@ public class User {
     private boolean isPremium;
 
     // Onboarding fields
-    private boolean onboardingComplete; // true once user selects SEEKER or OWNER
+    private boolean roleSelectionComplete; // true once user selects SEEKER or OWNER
+    private boolean onboardingComplete; // true once role-specific data + KYC are completed
     private String roleConfirmedAt; // ISO timestamp when role was confirmed
     private boolean ownerOnboardingComplete; // true once owner creates their first listing
+    private String kycDocumentType; // AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT
+    private String kycDocumentImageUrl;
+    private String kycSelfieImageUrl;
+    private boolean kycComplete;
+    private String kycCompletedAt;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("PK")

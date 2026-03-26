@@ -27,8 +27,6 @@ public class SecurityConfig {
                                 "/health",
                                 "/auth/otp/send",
                                 "/auth/otp/verify",
-                                "/auth/social/google",
-                                "/auth/social/apple",
                                 "/auth/refresh",
                                 "/chat-socket/**")
                         .permitAll()

@@ -4,15 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -21,13 +15,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final RoleChangeHistoryRepository roleChangeHistoryRepository;
-
-    @org.springframework.beans.factory.annotation.Value("${google.client-id}")
-    private String googleClientId;
-
-    // ─────────────────────────────────────────
-    // OTP Login
-    // ─────────────────────────────────────────
 
     public void sendOtp(String phone) {
         // TODO: Integrate Twilio / MSG91 for real SMS
@@ -38,86 +25,10 @@ public class AuthService {
         if (!"123456".equals(otp)) {
             throw new RuntimeException("Invalid OTP");
         }
-        boolean[] isNew = { false };
-        User user = userRepository.findById(phone).orElseGet(() -> {
-            isNew[0] = true;
-            User newUser = User.builder()
-                    .userId(phone)
-                    .phone(phone)
-                    .roles(null) // DynamoDB rejects empty sets — roles assigned later via /auth/set-role
-                    .isPremium(false)
-                    .onboardingComplete(false)
-                    .build();
-            userRepository.save(newUser);
-            return newUser;
-        });
-        return buildAuthResponse(user, isNew[0]);
+
+        User user = userRepository.findById(phone).orElseGet(() -> createPhoneUser(phone));
+        return buildAuthResponse(user);
     }
-
-    // ─────────────────────────────────────────
-    // Google Login
-    // ─────────────────────────────────────────
-
-    public AuthResponse loginWithGoogle(String idTokenString) {
-        try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                    new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singletonList(googleClientId))
-                    .build();
-
-            GoogleIdToken idToken = verifier.verify(idTokenString);
-            if (idToken == null)
-                throw new RuntimeException("Invalid Google ID token.");
-
-            GoogleIdToken.Payload payload = idToken.getPayload();
-            String userId = payload.getSubject();
-            boolean[] isNew = { false };
-
-            User user = userRepository.findById(userId).orElseGet(() -> {
-                isNew[0] = true;
-                User newUser = User.builder()
-                        .userId(userId)
-                        .googleId(userId)
-                        .email(payload.getEmail())
-                        .name((String) payload.get("name"))
-                        .roles(null) // DynamoDB rejects empty sets — roles assigned later via /auth/set-role
-                        .onboardingComplete(false)
-                        .build();
-                userRepository.save(newUser);
-                return newUser;
-            });
-            return buildAuthResponse(user, isNew[0]);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Google Auth failed: " + e.getMessage());
-        }
-    }
-
-    // ─────────────────────────────────────────
-    // Apple Login
-    // ─────────────────────────────────────────
-
-    public AuthResponse loginWithApple(String appleId, String email) {
-        // TODO: Verify Apple JWT using Apple's JWKS endpoint
-        boolean[] isNew = { false };
-        User user = userRepository.findById(appleId).orElseGet(() -> {
-            isNew[0] = true;
-            User newUser = User.builder()
-                    .userId(appleId)
-                    .appleId(appleId)
-                    .email(email)
-                    .roles(null) // DynamoDB rejects empty sets — roles assigned later via /auth/set-role
-                    .onboardingComplete(false)
-                    .build();
-            userRepository.save(newUser);
-            return newUser;
-        });
-        return buildAuthResponse(user, isNew[0]);
-    }
-
-    // ─────────────────────────────────────────
-    // Refresh Token
-    // ─────────────────────────────────────────
 
     public AuthResponse refreshAccessToken(String refreshToken) {
         if (!jwtUtil.isTokenValid(refreshToken)) {
@@ -134,17 +45,13 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return buildAuthResponse(user, false);
+        return buildAuthResponse(user);
     }
 
-    // ─────────────────────────────────────────
-    // Role Selection (Post-login onboarding)
-    // ─────────────────────────────────────────
-
     public void setUserRole(String userId, String role) {
-        String newRole = role.toUpperCase();
+        String newRole = normalizeRole(role);
         if (!Set.of("SEEKER", "OWNER").contains(newRole)) {
-            throw new RuntimeException("Invalid role. Allowed values: SEEKER, OWNER");
+            throw new RuntimeException("Invalid role. Allowed values: SEEKER, OWNER, TENANT, HOST");
         }
 
         User user = userRepository.findById(userId)
@@ -152,7 +59,6 @@ public class AuthService {
 
         Set<String> currentRoles = user.getRoles() != null ? user.getRoles() : new HashSet<>();
 
-        // Track role change if switching from an existing role
         if (!currentRoles.isEmpty()) {
             String fromRole = currentRoles.contains("OWNER") ? "OWNER" : "SEEKER";
             if (!fromRole.equals(newRole)) {
@@ -166,35 +72,54 @@ public class AuthService {
             }
         }
 
-        // Set new role (replace old primary role, keep both if already has both)
         currentRoles.add(newRole);
         user.setRoles(currentRoles);
-        user.setOnboardingComplete(true);
+        user.setRoleSelectionComplete(true);
+        user.setOnboardingComplete(false);
         user.setRoleConfirmedAt(LocalDateTime.now().toString());
         userRepository.save(user);
     }
-
-    // ─────────────────────────────────────────
-    // Role History
-    // ─────────────────────────────────────────
 
     public List<RoleChangeHistory> getRoleHistory(String userId) {
         return roleChangeHistoryRepository.findByUserId(userId);
     }
 
-    // ─────────────────────────────────────────
-    // Internal helper
-    // ─────────────────────────────────────────
+    private User createPhoneUser(String phone) {
+        User newUser = User.builder()
+                .userId(phone)
+                .phone(phone)
+                .roles(null)
+                .isPremium(false)
+                .roleSelectionComplete(false)
+                .onboardingComplete(false)
+                .ownerOnboardingComplete(false)
+                .kycComplete(false)
+                .build();
+        userRepository.save(newUser);
+        return newUser;
+    }
 
-    private AuthResponse buildAuthResponse(User user, boolean isNewUser) {
+    private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRoles());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .userId(user.getUserId())
-                .isNewUser(isNewUser)
-                .accessTokenExpiresIn(24 * 3600L) // 86400 seconds
+                .isNewUser(!user.isOnboardingComplete())
+                .accessTokenExpiresIn(24 * 3600L)
                 .build();
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return "";
+        }
+
+        return switch (role.trim().toUpperCase()) {
+            case "TENANT" -> "SEEKER";
+            case "HOST" -> "OWNER";
+            default -> role.trim().toUpperCase();
+        };
     }
 }
