@@ -1,5 +1,6 @@
 package com.flatmate.app.auth;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
@@ -33,6 +34,8 @@ public class User {
     private SeekerProfile seekerProfile;
     
     private String profilePic;
+
+    @JsonProperty("description")
     private String bio;
     private Set<String> roles;
     private String activeRole;
