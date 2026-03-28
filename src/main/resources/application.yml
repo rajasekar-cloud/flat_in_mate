@@ -12,8 +12,8 @@ server:
 # DynamoDB / AWS Configuration
 aws:
   region: ${AWS_REGION:ap-south-1}
-  access-key: ${AWS_ACCESS_KEY_ID}
-  secret-key: ${AWS_SECRET_ACCESS_KEY}
+  access-key: ${AWS_ACCESS_KEY_ID:local-dev-placeholder}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:local-dev-placeholder}
   dynamodb:
     table-name: ${DYNAMODB_TABLE_NAME:FlatmateData}
   s3:
@@ -21,12 +21,12 @@ aws:
 
 # Razorpay Configuration
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID}
-  key-secret: ${RAZORPAY_KEY_SECRET}
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
+  key-secret: ${RAZORPAY_KEY_SECRET:local-dev-placeholder}
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long-for-hs256}
   access-token-expiry-hours: ${JWT_ACCESS_EXPIRY_HOURS:24}
   refresh-token-expiry-days: ${JWT_REFRESH_EXPIRY_DAYS:60}
 

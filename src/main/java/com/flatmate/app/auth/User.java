@@ -1,11 +1,9 @@
 package com.flatmate.app.auth;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
 import com.flatmate.app.user.SeekerProfile;
-import com.flatmate.app.user.enums.Gender;
 
 import java.util.Set;
 
@@ -28,14 +26,12 @@ public class User {
     private String firstName;
     private String lastName;
     private String dateOfBirth; // YYYY-MM-DD
-    private Gender gender;
+    private String gender;
 
     // Profile specifics
     private SeekerProfile seekerProfile;
     
     private String profilePic;
-
-    @JsonProperty("description")
     private String bio;
     private Set<String> roles;
     private String activeRole;

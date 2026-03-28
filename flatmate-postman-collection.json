@@ -1,11 +1,11 @@
 {
   "info": {
-    "name": "FlatMate App API — v4",
-    "description": "Complete API collection. Base URL: https://13.127.30.77 (live) or http://localhost:8081 (local). Set 'token' variable after login. Disable SSL verification in Postman settings for the live server.",
+    "name": "FlatMate App API — v5",
+    "description": "Complete API collection. Base URL: https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod (production) or http://localhost:8081 (local). Set 'token' variable after login.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",   "value": "https://flatmate-api.duckdns.org", "description": "Live DuckDNS Server with SSL" },
+    { "key": "baseUrl",   "value": "https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod", "description": "AWS API Gateway Production Endpoint" },
     { "key": "token",     "value": "<paste accessToken here after login>" },
     { "key": "refreshToken", "value": "<paste refreshToken here after login>" },
     { "key": "userId",    "value": "user_001" },
@@ -97,9 +97,9 @@
             "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"description\": \"I am a software engineer looking for a 2BHK near Koramangala.\"\n}"
             },
-            "description": "Step 1 for both SEEKER and OWNER after role selection."
+            "description": "Step 1 for both SEEKER and OWNER after role selection. 'description' is the user bio/about-me field."
           }
         },
         {

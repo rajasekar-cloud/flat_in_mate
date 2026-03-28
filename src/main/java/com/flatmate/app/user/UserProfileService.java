@@ -51,6 +51,7 @@ public class UserProfileService {
                 if (newSeeker.getFoodHabit() != null) existingSeeker.setFoodHabit(newSeeker.getFoodHabit());
                 if (newSeeker.getMaritalStatus() != null) existingSeeker.setMaritalStatus(newSeeker.getMaritalStatus());
                 if (newSeeker.getPetHabit() != null) existingSeeker.setPetHabit(newSeeker.getPetHabit());
+                if (newSeeker.getDescription() != null) existingSeeker.setDescription(newSeeker.getDescription());
                 
                 // Location
                 if (newSeeker.getLocation() != null) existingSeeker.setLocation(newSeeker.getLocation());
@@ -132,7 +133,7 @@ public class UserProfileService {
         return hasText(user.getFirstName())
                 && hasText(user.getLastName())
                 && hasText(user.getDateOfBirth())
-                && user.getGender() != null;
+                && hasText(user.getGender());
     }
 
     private boolean isRoleSpecificProfileComplete(User user) {
@@ -154,11 +155,11 @@ public class UserProfileService {
                 && hasText(seekerProfile.getCompanyName())
                 && seekerProfile.getKnownLanguages() != null
                 && !seekerProfile.getKnownLanguages().isEmpty()
-                && seekerProfile.getSmokingHabit() != null
-                && seekerProfile.getDrinkingHabit() != null
-                && seekerProfile.getFoodHabit() != null
-                && seekerProfile.getMaritalStatus() != null
-                && seekerProfile.getPetHabit() != null
+                && hasText(seekerProfile.getSmokingHabit())
+                && hasText(seekerProfile.getDrinkingHabit())
+                && hasText(seekerProfile.getFoodHabit())
+                && hasText(seekerProfile.getMaritalStatus())
+                && hasText(seekerProfile.getPetHabit())
                 && seekerProfile.getLocation() != null;
     }
 

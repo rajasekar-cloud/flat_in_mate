@@ -1,7 +1,6 @@
 package com.flatmate.app.user;
 
 import com.flatmate.app.location.UserLocation;
-import com.flatmate.app.user.enums.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,11 +21,12 @@ public class SeekerProfile {
     private List<String> knownLanguages;
     
     // Lifestyle
-    private SmokingHabit smokingHabit;
-    private DrinkingHabit drinkingHabit;
-    private FoodHabit foodHabit;
-    private MaritalStatus maritalStatus;
-    private PetHabit petHabit;
+    private String smokingHabit;
+    private String drinkingHabit;
+    private String foodHabit;
+    private String maritalStatus;
+    private String petHabit;
+    private String description;
     
     // Map Location
     private UserLocation location;
