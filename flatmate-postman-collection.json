@@ -1,34 +1,34 @@
 {
   "info": {
-    "name": "FlatMate App API — v6",
-    "description": "Complete API collection. Base URL: https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod (production) or http://localhost:8081 (local). Added propertyName and Interests API.",
+    "name": "FlatMate App API - v7",
+    "description": "Updated Postman collection aligned with current Spring controllers, including switch-role flow and current location/chat/notification endpoints.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod",
-      "description": "AWS API Gateway Production Endpoint"
+      "description": "Production API base URL. Replace with http://localhost:8081 for local testing."
     },
     {
       "key": "token",
-      "value": "<paste accessToken here after login>"
+      "value": "<paste accessToken here>"
     },
     {
       "key": "refreshToken",
-      "value": "<paste refreshToken here after login>"
+      "value": "<paste refreshToken here>"
     },
     {
       "key": "userId",
-      "value": "user_001"
+      "value": "+919876543210"
     },
     {
       "key": "ownerId",
-      "value": "owner_001"
+      "value": "+919876543210"
     },
     {
       "key": "seekerId",
-      "value": "seeker_001"
+      "value": "+919876543210"
     },
     {
       "key": "listingId",
@@ -40,16 +40,36 @@
     },
     {
       "key": "kycDocumentUrl",
-      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/aadhar-front.jpg"
+      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/document/aadhar-front.jpg"
     },
     {
       "key": "kycSelfieUrl",
-      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/selfie.jpg"
+      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/selfie/selfie.jpg"
     }
   ],
   "item": [
     {
-      "name": "🔐 Auth",
+      "name": "Health",
+      "item": [
+        {
+          "name": "Get Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
       "item": [
         {
           "name": "1. Send OTP",
@@ -79,7 +99,7 @@
           }
         },
         {
-          "name": "2. Verify OTP -> Get Token",
+          "name": "2. Verify OTP",
           "request": {
             "method": "POST",
             "header": [
@@ -103,11 +123,11 @@
               "mode": "raw",
               "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}"
             },
-            "description": "Returns a JWT token."
+            "description": "Returns accessToken, refreshToken, roles, activeRole and onboarding flags."
           }
         },
         {
-          "name": "3. Google Login",
+          "name": "3. Refresh Token",
           "request": {
             "method": "POST",
             "header": [
@@ -117,51 +137,23 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/social/google",
+              "raw": "{{baseUrl}}/auth/refresh",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "social",
-                "google"
+                "refresh"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"idToken\": \"YOUR_GOOGLE_ID_TOKEN\"\n}"
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
             }
           }
         },
         {
-          "name": "4. Apple Login",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/social/apple",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "social",
-                "apple"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"appleId\": \"apple_uid\",\n  \"email\": \"user@apple.com\"\n}"
-            }
-          }
-        },
-        {
-          "name": "3. Set Role",
+          "name": "4. Set Role",
           "request": {
             "method": "POST",
             "header": [
@@ -188,37 +180,11 @@
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"SEEKER\"\n}"
             },
-            "description": "Accepted role values: SEEKER, OWNER, TENANT, HOST. TENANT maps to SEEKER. HOST maps to OWNER."
+            "description": "Accepted values: SEEKER, OWNER, TENANT, HOST. TENANT maps to SEEKER and HOST maps to OWNER."
           }
         },
         {
-          "name": "4. Refresh Access Token",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/refresh",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "refresh"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-            }
-          }
-        },
-        {
-          "name": "5. Switch Role",
+          "name": "5. Switch Role to Seeker",
           "request": {
             "method": "POST",
             "header": [
@@ -243,14 +209,44 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"TENANT\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"SEEKER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "6. Switch Role to Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/switch-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "switch-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"OWNER\"\n}"
             }
           }
         }
       ]
     },
     {
-      "name": "👤 Profile — Basic Info (All Users)",
+      "name": "Profiles",
       "item": [
         {
           "name": "1. Get Profile",
@@ -275,7 +271,7 @@
           }
         },
         {
-          "name": "2. Update Basic Info (Step 1 — All Users)",
+          "name": "2. Update Basic Profile",
           "request": {
             "method": "POST",
             "header": [
@@ -299,43 +295,12 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"description\": \"I am a software engineer looking for a 2BHK near Koramangala.\"\n}"
-            },
-            "description": "Step 1 for both SEEKER and OWNER after role selection. 'description' is the user bio/about-me field."
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"bio\": \"Software engineer looking for a flat near Koramangala.\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile.jpg\"\n}"
+            }
           }
         },
         {
-          "name": "3. Upload Profile Photo → Get S3 URL",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=profile_photo.jpg",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "listings",
-                "{{listingId}}",
-                "upload-url"
-              ],
-              "query": [
-                {
-                  "key": "fileName",
-                  "value": "profile_photo.jpg"
-                }
-              ]
-            },
-            "description": "Get a pre-signed S3 URL. Then PUT the image bytes directly to that URL. Then set profilePic in Update Basic Info."
-          }
-        },
-        {
-          "name": "4. Update Profile Photo URL",
+          "name": "3. Update Seeker Profile",
           "request": {
             "method": "POST",
             "header": [
@@ -359,35 +324,12 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile_photo.jpg\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\",\n    \"knownLanguages\": [\n      \"Tamil\",\n      \"English\",\n      \"Hindi\"\n    ],\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\",\n    \"description\": \"Looking for calm and clean flatmates.\",\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Koramangala, Bangalore\"\n    }\n  }\n}"
             }
           }
         },
         {
-          "name": "5. Get Role History",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/profiles/{{userId}}/role-history",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "profiles",
-                "{{userId}}",
-                "role-history"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6. Get KYC Upload URL",
+          "name": "4. Get KYC Upload URL - Document",
           "request": {
             "method": "GET",
             "header": [
@@ -417,12 +359,45 @@
                   "value": "document"
                 }
               ]
-            },
-            "description": "Call once with type=document and once with type=selfie. Upload the file bytes to the returned url, then use the returned filePath in /profiles/kyc."
+            }
           }
         },
         {
-          "name": "7. Complete KYC (Both Roles)",
+          "name": "5. Get KYC Upload URL - Selfie",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=selfie.jpg&type=selfie",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles",
+                "{{userId}}",
+                "kyc",
+                "upload-url"
+              ],
+              "query": [
+                {
+                  "key": "fileName",
+                  "value": "selfie.jpg"
+                },
+                {
+                  "key": "type",
+                  "value": "selfie"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Complete KYC",
           "request": {
             "method": "POST",
             "header": [
@@ -448,169 +423,62 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"documentType\": \"AADHAR_CARD\",\n  \"documentImageUrl\": \"{{kycDocumentUrl}}\",\n  \"selfieImageUrl\": \"{{kycSelfieUrl}}\"\n}"
-            },
-            "description": "Use after profile data is completed. Allowed documentType values: AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT."
-          }
-        }
-      ]
-    },
-    {
-      "name": "🔍 Seeker Onboarding (Tenant Only)",
-      "item": [
-        {
-          "name": "1. Save Location (Map Pin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/profiles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "profiles"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
-            },
-            "description": "User drags map pin to their current location. Save lat/lng and formatted address."
-          }
-        },
-        {
-          "name": "2. Save Education & Job",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/profiles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "profiles"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\"\n  }\n}"
             }
           }
         },
         {
-          "name": "3. Save Languages",
+          "name": "7. Register As Owner",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/profiles",
+              "raw": "{{baseUrl}}/profiles/{{userId}}/owner",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "profiles"
+                "profiles",
+                "{{userId}}",
+                "owner"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"]\n  }\n}"
             }
           }
         },
         {
-          "name": "4. Save Lifestyle Preferences",
+          "name": "8. Get Role History",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/profiles",
+              "raw": "{{baseUrl}}/profiles/{{userId}}/role-history",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "profiles"
+                "profiles",
+                "{{userId}}",
+                "role-history"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\"\n  }\n}"
-            },
-            "description": "smokingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\ndrinkingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\nfoodHabit: NON_VEGETARIAN | VEGETARIAN | EGGETARIAN | VEGAN | PESCATARIAN\nmaritalStatus: SINGLE | SINGLE_KIDS | DIVORCED | DIVORCED_KIDS | WIDOWED | WIDOWED_KIDS | SEPARATED | SEPARATED_KIDS\npetHabit: HAS_PETS | NO_PETS"
-          }
-        },
-        {
-          "name": "5. Save Full Seeker Profile (All at once)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/profiles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "profiles"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile.jpg\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\",\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"],\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\",\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
             }
           }
         }
       ]
     },
     {
-      "name": "🏠 Owner — Listing APIs",
+      "name": "Listings",
       "item": [
         {
-          "name": "1. Publish Listing (Full — 11 Steps)",
+          "name": "1. Publish Listing",
           "request": {
             "method": "POST",
             "header": [
@@ -634,7 +502,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"propertyName\": \"Sunrise Apartments\",\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"A_ROOM\",\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"SEMI_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyFloor\": \"FIRST_FLOOR\",\n  \"bhkType\": \"2BHK\",\n  \"floorType\": \"SINGLE_FLOOR\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"0_TO_1_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n  \"addressLine1\": \"Akshya Nagar 1st Block 1st Cross\",\n  \"area\": \"Rammurthy nagar\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560016\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"bathroomType\": \"ATTACHED\",\n  \"amenities\": [\"WiFi\", \"AC\", \"Washing Machine\"],\n  \"coOccupants\": \"MALE_ONLY\",\n  \"houseRules\": \"No parties. No smoking inside.\",\n  \"photos\": [\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_1.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_2.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_3.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_4.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_5.jpg\"\n  ],\n  \"monthlyRent\": 15000,\n  \"maintenanceCharges\": 500,\n  \"noticePeriodMonths\": 2\n}"
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"propertyName\": \"Sunrise Apartments\",\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"PRIVATE_ROOM\",\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"SEMI_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyOnFloor\": \"FIRST\",\n  \"floorPlan\": \"2BHK\",\n  \"floorType\": \"SINGLE\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"0_1_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"showPreciseLocation\": true,\n  \"country\": \"India\",\n  \"flatHouseDetails\": \"Flat 4B\",\n  \"streetAddress\": \"80 Feet Road\",\n  \"landmark\": \"Near Forum Mall\",\n  \"district\": \"Koramangala\",\n  \"pinCode\": \"560034\",\n  \"city\": \"Bangalore\",\n  \"bathroomType\": \"ATTACHED\",\n  \"occupantType\": \"ROOMMATES\",\n  \"lights\": 4,\n  \"fans\": 3,\n  \"ac\": 1,\n  \"tv\": 1,\n  \"beds\": 2,\n  \"wardrobes\": 2,\n  \"geysers\": 1,\n  \"amenities\": [\n    \"Wifi\",\n    \"Washing Machine\",\n    \"Stove\"\n  ],\n  \"customAmenities\": [\n    \"Water Purifier\"\n  ],\n  \"description\": \"Spacious 2BHK with good ventilation.\",\n  \"petsAllowed\": false,\n  \"drinkingAllowed\": true,\n  \"smokingAllowed\": false,\n  \"powerBackup\": true,\n  \"photos\": [\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_1.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_2.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_3.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_4.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_5.jpg\"\n  ],\n  \"rent\": 15000,\n  \"minRent\": 14000,\n  \"maxRent\": 17000,\n  \"noticePeriod\": \"2_MONTHS\",\n  \"roomsAvailable\": 1,\n  \"genderPreference\": \"ANY\",\n  \"occupancy\": 2\n}"
             }
           }
         },
@@ -664,42 +532,12 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"monthlyRent\": 15000\n}"
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"rent\": 15000\n}"
             }
           }
         },
         {
-          "name": "3. Get Photo/Video Upload URL",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=photo_1.jpg",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "listings",
-                "{{listingId}}",
-                "upload-url"
-              ],
-              "query": [
-                {
-                  "key": "fileName",
-                  "value": "photo_1.jpg"
-                }
-              ]
-            },
-            "description": "Step 1: Call this per photo (5 times for 5 photos). Returns { uploadUrl, filePath }.\nStep 2: PUT photo bytes directly to uploadUrl (no auth header needed).\nStep 3: Include all filePaths in 'photos' array when publishing listing."
-          }
-        },
-        {
-          "name": "4. Update Listing",
+          "name": "3. Update Listing",
           "request": {
             "method": "PUT",
             "header": [
@@ -724,12 +562,12 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"propertyName\": \"Sunrise Apartments Phase 2\",\n  \"monthlyRent\": 16000,\n  \"houseRules\": \"Updated rules\"\n}"
+              "raw": "{\n  \"propertyName\": \"Sunrise Apartments Phase 2\",\n  \"rent\": 16000,\n  \"description\": \"Updated listing description\"\n}"
             }
           }
         },
         {
-          "name": "5. Get All Listings",
+          "name": "4. Get All Listings",
           "request": {
             "method": "GET",
             "header": [
@@ -750,7 +588,7 @@
           }
         },
         {
-          "name": "6. Get Single Listing",
+          "name": "5. Get Listing By ID",
           "request": {
             "method": "GET",
             "header": [
@@ -772,7 +610,7 @@
           }
         },
         {
-          "name": "7. Get Owner's Listings",
+          "name": "6. Get Listings By Owner",
           "request": {
             "method": "GET",
             "header": [
@@ -795,7 +633,7 @@
           }
         },
         {
-          "name": "8. Deactivate Listing",
+          "name": "7. Deactivate Listing",
           "request": {
             "method": "DELETE",
             "header": [
@@ -815,14 +653,9 @@
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "📍 Location / Nearby Search",
-      "item": [
+        },
         {
-          "name": "1. Find Nearby Listings (GPS)",
+          "name": "8. Get Listing Upload URL",
           "request": {
             "method": "GET",
             "header": [
@@ -832,39 +665,31 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/listings/nearby?lat=12.9716&lng=77.5946&radiusKm=5",
+              "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=photo_1.jpg",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "listings",
-                "nearby"
+                "{{listingId}}",
+                "upload-url"
               ],
               "query": [
                 {
-                  "key": "lat",
-                  "value": "12.9716"
-                },
-                {
-                  "key": "lng",
-                  "value": "77.5946"
-                },
-                {
-                  "key": "radiusKm",
-                  "value": "5"
+                  "key": "fileName",
+                  "value": "photo_1.jpg"
                 }
               ]
-            },
-            "description": "Returns listings within the given radius from the seeker's GPS coordinates."
+            }
           }
         }
       ]
     },
     {
-      "name": "💬 Chat",
+      "name": "Location",
       "item": [
         {
-          "name": "1. Send Message",
+          "name": "1. Index Listing Coordinates",
           "request": {
             "method": "POST",
             "header": [
@@ -878,23 +703,23 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/chat/send",
+              "raw": "{{baseUrl}}/location/index",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "chat",
-                "send"
+                "location",
+                "index"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"senderId\": \"{{userId}}\",\n  \"receiverId\": \"other_user_id\",\n  \"content\": \"Hi, is the flat still available?\"\n}"
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946\n}"
             }
           }
         },
         {
-          "name": "2. Get Chat History",
+          "name": "2. Find Nearby Listings",
           "request": {
             "method": "GET",
             "header": [
@@ -904,22 +729,42 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/chat/history?user1={{userId}}&user2=other_user_id",
+              "raw": "{{baseUrl}}/location/nearby?lat=12.9716&lng=77.5946&radius=10&minRent=10000&maxRent=20000&genderPreference=ANY&minRooms=1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "chat",
-                "history"
+                "location",
+                "nearby"
               ],
               "query": [
                 {
-                  "key": "user1",
-                  "value": "{{userId}}"
+                  "key": "lat",
+                  "value": "12.9716"
                 },
                 {
-                  "key": "user2",
-                  "value": "other_user_id"
+                  "key": "lng",
+                  "value": "77.5946"
+                },
+                {
+                  "key": "radius",
+                  "value": "10"
+                },
+                {
+                  "key": "minRent",
+                  "value": "10000"
+                },
+                {
+                  "key": "maxRent",
+                  "value": "20000"
+                },
+                {
+                  "key": "genderPreference",
+                  "value": "ANY"
+                },
+                {
+                  "key": "minRooms",
+                  "value": "1"
                 }
               ]
             }
@@ -928,10 +773,10 @@
       ]
     },
     {
-      "name": "❤️ Swipe & Match",
+      "name": "Swipes & Matches",
       "item": [
         {
-          "name": "1. Swipe on Listing",
+          "name": "1. Swipe On Listing",
           "request": {
             "method": "POST",
             "header": [
@@ -960,7 +805,7 @@
           }
         },
         {
-          "name": "2. Get Listing Interests (Owner View)",
+          "name": "2. Get Listing Interests",
           "request": {
             "method": "GET",
             "header": [
@@ -980,12 +825,41 @@
                 "{{listingId}}",
                 "interests"
               ]
-            },
-            "description": "Returns a list of seekers who swiped RIGHT on this listing, including their full profile information."
+            }
           }
         },
         {
-          "name": "3. Get Matches",
+          "name": "3. Approve Match",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matches/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4. Get Matches",
           "request": {
             "method": "GET",
             "header": [
@@ -1009,10 +883,10 @@
       ]
     },
     {
-      "name": "🔔 Notifications",
+      "name": "Chat",
       "item": [
         {
-          "name": "1. Register Device Token",
+          "name": "1. Mark Chat As Read",
           "request": {
             "method": "POST",
             "header": [
@@ -1026,18 +900,157 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/notifications/device-token",
+              "raw": "{{baseUrl}}/chat/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "read"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"role\": \"SEEKER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Get Chat Upload URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/upload-url?fileName=voice-note.m4a",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "upload-url"
+              ],
+              "query": [
+                {
+                  "key": "fileName",
+                  "value": "voice-note.m4a"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Chat History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{matchId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "{{matchId}}",
+                "history"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "1. Save Device Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/token",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "notifications",
-                "device-token"
+                "token"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"<FCM_DEVICE_TOKEN>\",\n  \"platform\": \"ANDROID\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"<FCM_DEVICE_TOKEN>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Send Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "send"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"title\": \"New Interest\",\n  \"body\": \"Someone liked your listing.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "3. Get Inbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/inbox/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "inbox",
+                "{{userId}}"
+              ]
             }
           }
         }

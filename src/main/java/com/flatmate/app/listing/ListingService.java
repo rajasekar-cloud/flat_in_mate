@@ -1,5 +1,6 @@
 package com.flatmate.app.listing;
 
+import com.flatmate.app.auth.UserOnboardingEvaluator;
 import com.flatmate.app.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,7 @@ public class ListingService {
         if (listing.getOwnerId() != null) {
             userRepository.findById(listing.getOwnerId()).ifPresent(user -> {
                 user.setOwnerOnboardingComplete(true);
+                user.setOnboardingComplete(UserOnboardingEvaluator.isOnboardingCompleteForActiveRole(user));
                 userRepository.save(user);
             });
         }

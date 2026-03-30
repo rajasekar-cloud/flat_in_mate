@@ -82,6 +82,7 @@ public class AuthService {
         }
         user.setActiveRole(newRole);
         user.setRoleConfirmedAt(LocalDateTime.now().toString());
+        user.setOnboardingComplete(UserOnboardingEvaluator.isOnboardingCompleteForRole(user, newRole));
         userRepository.save(user);
     }
 
@@ -100,6 +101,7 @@ public class AuthService {
         }
 
         user.setActiveRole(targetRole);
+        user.setOnboardingComplete(UserOnboardingEvaluator.isOnboardingCompleteForRole(user, targetRole));
         userRepository.save(user);
         return buildAuthResponse(user);
     }
@@ -125,6 +127,8 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
+        String activeRole = UserOnboardingEvaluator.resolveActiveRole(user);
+        boolean onboardingComplete = UserOnboardingEvaluator.isOnboardingCompleteForRole(user, activeRole);
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRoles());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
         return AuthResponse.builder()
@@ -132,29 +136,11 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .userId(user.getUserId())
                 .roles(user.getRoles())
-                .activeRole(resolveActiveRole(user))
-                .isNewUser(!user.isOnboardingComplete())
-                .onboardingComplete(user.isOnboardingComplete())
+                .activeRole(activeRole)
+                .isNewUser(!onboardingComplete)
+                .onboardingComplete(onboardingComplete)
                 .accessTokenExpiresIn(24 * 3600L)
                 .build();
-    }
-
-    private String resolveActiveRole(User user) {
-        if (user.getActiveRole() != null && !user.getActiveRole().isBlank()) {
-            return user.getActiveRole();
-        }
-
-        Set<String> roles = user.getRoles();
-        if (roles == null || roles.isEmpty()) {
-            return null;
-        }
-        if (roles.contains("OWNER")) {
-            return "OWNER";
-        }
-        if (roles.contains("SEEKER")) {
-            return "SEEKER";
-        }
-        return null;
     }
 
     private String normalizeRole(String role) {

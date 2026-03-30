@@ -1,6 +1,7 @@
 package com.flatmate.app.user;
 
 import com.flatmate.app.auth.User;
+import com.flatmate.app.auth.UserOnboardingEvaluator;
 import com.flatmate.app.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -107,64 +108,7 @@ public class UserProfileService {
     }
 
     private void updateOnboardingStatus(User user) {
-        user.setOnboardingComplete(isFullyOnboarded(user));
-    }
-
-    private boolean isFullyOnboarded(User user) {
-        if (!user.isRoleSelectionComplete() || user.getRoles() == null || user.getRoles().isEmpty()) {
-            return false;
-        }
-
-        if (!isBasicProfileComplete(user)) {
-            return false;
-        }
-
-        if (!isRoleSpecificProfileComplete(user)) {
-            return false;
-        }
-
-        return user.isKycComplete()
-                && hasText(user.getKycDocumentType())
-                && hasText(user.getKycDocumentImageUrl())
-                && hasText(user.getKycSelfieImageUrl());
-    }
-
-    private boolean isBasicProfileComplete(User user) {
-        return hasText(user.getFirstName())
-                && hasText(user.getLastName())
-                && hasText(user.getDateOfBirth())
-                && hasText(user.getGender());
-    }
-
-    private boolean isRoleSpecificProfileComplete(User user) {
-        Set<String> roles = user.getRoles();
-        if (roles.contains("OWNER")) {
-            return user.isOwnerOnboardingComplete();
-        }
-        if (roles.contains("SEEKER")) {
-            return isSeekerProfileComplete(user);
-        }
-        return false;
-    }
-
-    private boolean isSeekerProfileComplete(User user) {
-        SeekerProfile seekerProfile = user.getSeekerProfile();
-        return seekerProfile != null
-                && hasText(seekerProfile.getEducation())
-                && hasText(seekerProfile.getJobTitle())
-                && hasText(seekerProfile.getCompanyName())
-                && seekerProfile.getKnownLanguages() != null
-                && !seekerProfile.getKnownLanguages().isEmpty()
-                && hasText(seekerProfile.getSmokingHabit())
-                && hasText(seekerProfile.getDrinkingHabit())
-                && hasText(seekerProfile.getFoodHabit())
-                && hasText(seekerProfile.getMaritalStatus())
-                && hasText(seekerProfile.getPetHabit())
-                && seekerProfile.getLocation() != null;
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        user.setOnboardingComplete(UserOnboardingEvaluator.isOnboardingCompleteForActiveRole(user));
     }
 
     private String normalizeDocumentType(String documentType) {
