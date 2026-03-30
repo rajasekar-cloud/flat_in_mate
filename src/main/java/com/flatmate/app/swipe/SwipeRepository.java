@@ -7,6 +7,10 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Repository
 public class SwipeRepository {
@@ -30,5 +34,17 @@ public class SwipeRepository {
                 .stream()
                 .flatMap(p -> p.items().stream())
                 .count();
+    }
+
+    public List<Swipe> findByListingId(String listingId) {
+        return swipeTable.index("ListingIndex")
+                .query(QueryEnhancedRequest.builder()
+                        .queryConditional(QueryConditional.keyEqualTo(Key.builder()
+                                .partitionValue(listingId)
+                                .build()))
+                        .build())
+                .stream()
+                .flatMap(p -> p.items().stream())
+                .collect(Collectors.toList());
     }
 }

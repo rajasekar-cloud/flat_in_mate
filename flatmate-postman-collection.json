@@ -1,20 +1,51 @@
 {
   "info": {
-    "name": "FlatMate App API — v5",
-    "description": "Complete API collection. Base URL: https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod (production) or http://localhost:8081 (local). Set 'token' variable after login.",
+    "name": "FlatMate App API — v6",
+    "description": "Complete API collection. Base URL: https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod (production) or http://localhost:8081 (local). Added propertyName and Interests API.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",   "value": "https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod", "description": "AWS API Gateway Production Endpoint" },
-    { "key": "token",     "value": "<paste accessToken here after login>" },
-    { "key": "refreshToken", "value": "<paste refreshToken here after login>" },
-    { "key": "userId",    "value": "user_001" },
-    { "key": "ownerId",   "value": "owner_001" },
-    { "key": "seekerId",  "value": "seeker_001" },
-    { "key": "listingId", "value": "listing_001" },
-    { "key": "matchId",   "value": "match_001" },
-    { "key": "kycDocumentUrl", "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/aadhar-front.jpg" },
-    { "key": "kycSelfieUrl",   "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/selfie.jpg" }
+    {
+      "key": "baseUrl",
+      "value": "https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod",
+      "description": "AWS API Gateway Production Endpoint"
+    },
+    {
+      "key": "token",
+      "value": "<paste accessToken here after login>"
+    },
+    {
+      "key": "refreshToken",
+      "value": "<paste refreshToken here after login>"
+    },
+    {
+      "key": "userId",
+      "value": "user_001"
+    },
+    {
+      "key": "ownerId",
+      "value": "owner_001"
+    },
+    {
+      "key": "seekerId",
+      "value": "seeker_001"
+    },
+    {
+      "key": "listingId",
+      "value": "listing_001"
+    },
+    {
+      "key": "matchId",
+      "value": "match_001"
+    },
+    {
+      "key": "kycDocumentUrl",
+      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/aadhar-front.jpg"
+    },
+    {
+      "key": "kycSelfieUrl",
+      "value": "https://s3.amazonaws.com/flatmate-photos/kyc/user_001/selfie.jpg"
+    }
   ],
   "item": [
     {
@@ -24,19 +55,109 @@
           "name": "1. Send OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/otp/send", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "send"] },
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919876543210\"\n}" }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "send"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919876543210\"\n}"
+            }
           }
         },
         {
           "name": "2. Verify OTP -> Get Token",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] },
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}" },
-            "description": "Returns { accessToken, refreshToken, userId, isNewUser }. For OTP users, userId is the phone number. If isNewUser=true continue onboarding. If isNewUser=false the user is fully onboarded."
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "description": "Returns a JWT token."
+          }
+        },
+        {
+          "name": "3. Google Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/social/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "social",
+                "google"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"YOUR_GOOGLE_ID_TOKEN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4. Apple Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/social/apple",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "social",
+                "apple"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appleId\": \"apple_uid\",\n  \"email\": \"user@apple.com\"\n}"
+            }
           }
         },
         {
@@ -44,11 +165,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/auth/set-role", "host": ["{{baseUrl}}"], "path": ["auth", "set-role"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"SEEKER\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/auth/set-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "set-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"SEEKER\"\n}"
+            },
             "description": "Accepted role values: SEEKER, OWNER, TENANT, HOST. TENANT maps to SEEKER. HOST maps to OWNER."
           }
         },
@@ -56,9 +195,26 @@
           "name": "4. Refresh Access Token",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
-            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
           }
         },
         {
@@ -66,11 +222,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/auth/switch-role", "host": ["{{baseUrl}}"], "path": ["auth", "switch-role"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"TENANT\"\n}" }
+            "url": {
+              "raw": "{{baseUrl}}/auth/switch-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "switch-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"TENANT\"\n}"
+            }
           }
         }
       ]
@@ -82,8 +256,22 @@
           "name": "1. Get Profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/profiles/{{userId}}", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles",
+                "{{userId}}"
+              ]
+            }
           }
         },
         {
@@ -91,10 +279,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"description\": \"I am a software engineer looking for a 2BHK near Koramangala.\"\n}"
@@ -106,12 +308,28 @@
           "name": "3. Upload Profile Photo → Get S3 URL",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=profile_photo.jpg",
-              "host": ["{{baseUrl}}"],
-              "path": ["listings", "{{listingId}}", "upload-url"],
-              "query": [{ "key": "fileName", "value": "profile_photo.jpg" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "upload-url"
+              ],
+              "query": [
+                {
+                  "key": "fileName",
+                  "value": "profile_photo.jpg"
+                }
+              ]
             },
             "description": "Get a pre-signed S3 URL. Then PUT the image bytes directly to that URL. Then set profilePic in Update Basic Info."
           }
@@ -121,10 +339,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile_photo.jpg\"\n}"
@@ -135,22 +367,55 @@
           "name": "5. Get Role History",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/role-history", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "role-history"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/role-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles",
+                "{{userId}}",
+                "role-history"
+              ]
+            }
           }
         },
         {
           "name": "6. Get KYC Upload URL",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=aadhar-front.jpg&type=document",
-              "host": ["{{baseUrl}}"],
-              "path": ["profiles", "{{userId}}", "kyc", "upload-url"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles",
+                "{{userId}}",
+                "kyc",
+                "upload-url"
+              ],
               "query": [
-                { "key": "fileName", "value": "aadhar-front.jpg" },
-                { "key": "type", "value": "document" }
+                {
+                  "key": "fileName",
+                  "value": "aadhar-front.jpg"
+                },
+                {
+                  "key": "type",
+                  "value": "document"
+                }
               ]
             },
             "description": "Call once with type=document and once with type=selfie. Upload the file bytes to the returned url, then use the returned filePath in /profiles/kyc."
@@ -161,10 +426,25 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles/kyc", "host": ["{{baseUrl}}"], "path": ["profiles", "kyc"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles",
+                "kyc"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"documentType\": \"AADHAR_CARD\",\n  \"documentImageUrl\": \"{{kycDocumentUrl}}\",\n  \"selfieImageUrl\": \"{{kycSelfieUrl}}\"\n}"
@@ -182,10 +462,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
@@ -198,10 +492,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\"\n  }\n}"
@@ -213,10 +521,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"]\n  }\n}"
@@ -228,14 +550,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\"\n  }\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"seekerProfile\": {\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\"\n  }\n}"
             },
             "description": "smokingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\ndrinkingHabit: OPEN_TO_ALL | REGULARLY | NEVER | SOMETIMES\nfoodHabit: NON_VEGETARIAN | VEGETARIAN | EGGETARIAN | VEGAN | PESCATARIAN\nmaritalStatus: SINGLE | SINGLE_KIDS | DIVORCED | DIVORCED_KIDS | WIDOWED | WIDOWED_KIDS | SEPARATED | SEPARATED_KIDS\npetHabit: HAS_PETS | NO_PETS"
           }
@@ -245,10 +580,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] },
+            "url": {
+              "raw": "{{baseUrl}}/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profiles"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"firstName\": \"Rajasekar\",\n  \"lastName\": \"Kumar\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"gender\": \"MAN\",\n  \"profilePic\": \"https://s3.amazonaws.com/flatmate-photos/users/user_001/profile.jpg\",\n  \"seekerProfile\": {\n    \"education\": \"Bachelor's\",\n    \"jobTitle\": \"Software Engineer\",\n    \"companyName\": \"TCS\",\n    \"knownLanguages\": [\"Tamil\", \"English\", \"Hindi\"],\n    \"smokingHabit\": \"NEVER\",\n    \"drinkingHabit\": \"SOMETIMES\",\n    \"foodHabit\": \"NON_VEGETARIAN\",\n    \"maritalStatus\": \"SINGLE\",\n    \"petHabit\": \"NO_PETS\",\n    \"location\": {\n      \"latitude\": 12.9716,\n      \"longitude\": 77.5946,\n      \"formattedAddress\": \"Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016\"\n    }\n  }\n}"
@@ -265,13 +614,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/listings", "host": ["{{baseUrl}}"], "path": ["listings"] },
+            "url": {
+              "raw": "{{baseUrl}}/listings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings"
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"A_ROOM\",\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"SEMI_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyFloor\": \"FIRST_FLOOR\",\n  \"bhkType\": \"2BHK\",\n  \"floorType\": \"SINGLE_FLOOR\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"0_TO_1_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n  \"addressLine1\": \"Akshya Nagar 1st Block 1st Cross\",\n  \"area\": \"Rammurthy nagar\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560016\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"bathroomType\": \"ATTACHED\",\n  \"amenities\": [\"WiFi\", \"AC\", \"Washing Machine\"],\n  \"coOccupants\": \"MALE_ONLY\",\n  \"houseRules\": \"No parties. No smoking inside.\",\n  \"photos\": [\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_1.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_2.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_3.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_4.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_5.jpg\"\n  ],\n  \"monthlyRent\": 15000,\n  \"maintenanceCharges\": 500,\n  \"noticePeriodMonths\": 2\n}"
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"propertyName\": \"Sunrise Apartments\",\n  \"placeType\": \"APARTMENT\",\n  \"roomType\": \"A_ROOM\",\n  \"availableFrom\": \"2026-04-01\",\n  \"furnishingStatus\": \"SEMI_FURNISHED\",\n  \"totalFloors\": 6,\n  \"propertyFloor\": \"FIRST_FLOOR\",\n  \"bhkType\": \"2BHK\",\n  \"floorType\": \"SINGLE_FLOOR\",\n  \"balconyAvailable\": true,\n  \"ageOfProperty\": \"0_TO_1_YEARS\",\n  \"carParking\": 1,\n  \"bikeParking\": 2,\n  \"addressLine1\": \"Akshya Nagar 1st Block 1st Cross\",\n  \"area\": \"Rammurthy nagar\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560016\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"bathroomType\": \"ATTACHED\",\n  \"amenities\": [\"WiFi\", \"AC\", \"Washing Machine\"],\n  \"coOccupants\": \"MALE_ONLY\",\n  \"houseRules\": \"No parties. No smoking inside.\",\n  \"photos\": [\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_1.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_2.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_3.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_4.jpg\",\n    \"https://s3.amazonaws.com/flatmate-photos/listings/listing_001/photo_5.jpg\"\n  ],\n  \"monthlyRent\": 15000,\n  \"maintenanceCharges\": 500,\n  \"noticePeriodMonths\": 2\n}"
             }
           }
         },
@@ -280,10 +643,25 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/listings/draft", "host": ["{{baseUrl}}"], "path": ["listings", "draft"] },
+            "url": {
+              "raw": "{{baseUrl}}/listings/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "draft"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"placeType\": \"APARTMENT\",\n  \"monthlyRent\": 15000\n}"
@@ -294,12 +672,28 @@
           "name": "3. Get Photo/Video Upload URL",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=photo_1.jpg",
-              "host": ["{{baseUrl}}"],
-              "path": ["listings", "{{listingId}}", "upload-url"],
-              "query": [{ "key": "fileName", "value": "photo_1.jpg" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "upload-url"
+              ],
+              "query": [
+                {
+                  "key": "fileName",
+                  "value": "photo_1.jpg"
+                }
+              ]
             },
             "description": "Step 1: Call this per photo (5 times for 5 photos). Returns { uploadUrl, filePath }.\nStep 2: PUT photo bytes directly to uploadUrl (no auth header needed).\nStep 3: Include all filePaths in 'photos' array when publishing listing."
           }
@@ -309,43 +703,117 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] },
-            "body": { "mode": "raw", "raw": "{\n  \"monthlyRent\": 16000,\n  \"houseRules\": \"Updated rules\"\n}" }
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyName\": \"Sunrise Apartments Phase 2\",\n  \"monthlyRent\": 16000,\n  \"houseRules\": \"Updated rules\"\n}"
+            }
           }
         },
         {
           "name": "5. Get All Listings",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings", "host": ["{{baseUrl}}"], "path": ["listings"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings"
+              ]
+            }
           }
         },
         {
           "name": "6. Get Single Listing",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}"
+              ]
+            }
           }
         },
         {
           "name": "7. Get Owner's Listings",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/owner/{{ownerId}}", "host": ["{{baseUrl}}"], "path": ["listings", "owner", "{{ownerId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/owner/{{ownerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "owner",
+                "{{ownerId}}"
+              ]
+            }
           }
         },
         {
           "name": "8. Deactivate Listing",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}"
+              ]
+            }
           }
         }
       ]
@@ -357,15 +825,34 @@
           "name": "1. Find Nearby Listings (GPS)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/listings/nearby?lat=12.9716&lng=77.5946&radiusKm=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["listings", "nearby"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "nearby"
+              ],
               "query": [
-                { "key": "lat", "value": "12.9716" },
-                { "key": "lng", "value": "77.5946" },
-                { "key": "radiusKm", "value": "5" }
+                {
+                  "key": "lat",
+                  "value": "12.9716"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.5946"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "5"
+                }
               ]
             },
             "description": "Returns listings within the given radius from the seeker's GPS coordinates."
@@ -381,25 +868,59 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/chat/send", "host": ["{{baseUrl}}"], "path": ["chat", "send"] },
-            "body": { "mode": "raw", "raw": "{\n  \"senderId\": \"{{userId}}\",\n  \"receiverId\": \"other_user_id\",\n  \"content\": \"Hi, is the flat still available?\"\n}" }
+            "url": {
+              "raw": "{{baseUrl}}/chat/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "send"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": \"{{userId}}\",\n  \"receiverId\": \"other_user_id\",\n  \"content\": \"Hi, is the flat still available?\"\n}"
+            }
           }
         },
         {
           "name": "2. Get Chat History",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/chat/history?user1={{userId}}&user2=other_user_id",
-              "host": ["{{baseUrl}}"],
-              "path": ["chat", "history"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "history"
+              ],
               "query": [
-                { "key": "user1", "value": "{{userId}}" },
-                { "key": "user2", "value": "other_user_id" }
+                {
+                  "key": "user1",
+                  "value": "{{userId}}"
+                },
+                {
+                  "key": "user2",
+                  "value": "other_user_id"
+                }
               ]
             }
           }
@@ -414,19 +935,75 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/swipes", "host": ["{{baseUrl}}"], "path": ["swipes"] },
-            "body": { "mode": "raw", "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"listingId\": \"{{listingId}}\",\n  \"direction\": \"RIGHT\"\n}" }
+            "url": {
+              "raw": "{{baseUrl}}/swipes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "swipes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seekerId\": \"{{seekerId}}\",\n  \"listingId\": \"{{listingId}}\",\n  \"type\": \"RIGHT\"\n}"
+            }
           }
         },
         {
-          "name": "2. Get Matches",
+          "name": "2. Get Listing Interests (Owner View)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/matches/{{userId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{userId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/swipes/listing/{{listingId}}/interests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "swipes",
+                "listing",
+                "{{listingId}}",
+                "interests"
+              ]
+            },
+            "description": "Returns a list of seekers who swiped RIGHT on this listing, including their full profile information."
+          }
+        },
+        {
+          "name": "3. Get Matches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{userId}}"
+              ]
+            }
           }
         }
       ]
@@ -439,11 +1016,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/notifications/device-token", "host": ["{{baseUrl}}"], "path": ["notifications", "device-token"] },
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"<FCM_DEVICE_TOKEN>\",\n  \"platform\": \"ANDROID\"\n}" }
+            "url": {
+              "raw": "{{baseUrl}}/notifications/device-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "device-token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"<FCM_DEVICE_TOKEN>\",\n  \"platform\": \"ANDROID\"\n}"
+            }
           }
         }
       ]

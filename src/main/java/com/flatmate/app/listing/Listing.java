@@ -15,6 +15,7 @@ public class Listing {
     // ── Core identifiers ────────────────────────────────────────────────────
     private String id;
     private String ownerId;
+    private String propertyName; // e.g. "Sunrise Apartments"
     private String createdAt;
     private String updatedAt;
     private String status; // DRAFT, PUBLISHED, DEACTIVATED

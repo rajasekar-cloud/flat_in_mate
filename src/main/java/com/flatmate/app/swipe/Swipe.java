@@ -11,6 +11,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 public class Swipe {
 
     private String seekerId;
+
+    @Getter(onMethod_ = {@DynamoDbSecondaryPartitionKey(indexNames = "ListingIndex")})
     private String listingId;
     private String type; // RIGHT, LEFT
     private String createdAt;

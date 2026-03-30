@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,5 +59,28 @@ public class SwipeService {
         if (totalCount >= 12) {
             throw new RuntimeException("Overall free limit reached. Subscribe for unlimited access!");
         }
+    }
+
+    public List<InterestedSeekerDTO> getInterestedSeekers(String listingId) {
+        return swipeRepository.findByListingId(listingId).stream()
+                .filter(s -> "RIGHT".equalsIgnoreCase(s.getType()))
+                .map(s -> {
+                    com.flatmate.app.auth.User user = userRepository.findById(s.getSeekerId())
+                            .orElse(null);
+                    
+                    if (user == null) return null;
+
+                    return InterestedSeekerDTO.builder()
+                            .seekerId(user.getUserId())
+                            .firstName(user.getFirstName())
+                            .lastName(user.getLastName())
+                            .profilePic(user.getProfilePic())
+                            .gender(user.getGender())
+                            .description(user.getBio()) // or user.getSeekerProfile().getDescription()
+                            .swipedAt(s.getCreatedAt())
+                            .build();
+                })
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
     }
 }

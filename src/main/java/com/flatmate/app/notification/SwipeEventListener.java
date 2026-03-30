@@ -1,5 +1,9 @@
 package com.flatmate.app.notification;
 
+import com.flatmate.app.listing.Listing;
+import com.flatmate.app.listing.ListingService;
+import com.flatmate.app.auth.User;
+import com.flatmate.app.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -13,6 +17,8 @@ public class SwipeEventListener {
 
     private final NotificationService notificationService;
     private final NotificationRepository notificationRepository;
+    private final ListingService listingService;
+    private final UserRepository userRepository;
 
     @EventListener
     public void handleSwipeCreated(String event) {
@@ -21,16 +27,23 @@ public class SwipeEventListener {
             String seekerId = event.split("seeker=")[1].split(",")[0];
             String listingId = event.split("listing=")[1];
 
-            // In a real app, look up the owner of the listing
-            String ownerId = "TODO_LOOKUP_OWNER";
+            // 1. Look up Listing & Seeker details
+            Listing listing = listingService.getListing(listingId);
+            User seeker = userRepository.findById(seekerId).orElse(null);
 
-            String title = "New Interest!";
-            String body = "A seeker (ID: " + seekerId + ") swiped right on your listing (ID: " + listingId + ")";
+            if (listing == null) return;
 
-            // 1. Send Push Notification (Mock)
+            String ownerId = listing.getOwnerId();
+            String propName = listing.getPropertyName() != null ? listing.getPropertyName() : "your listing";
+            String seekerName = seeker != null ? seeker.getFirstName() : "Someone";
+
+            String title = "New Interest in " + propName + "!";
+            String body = seekerName + " swiped right on your property. Check their profile to match!";
+
+            // 2. Send Push Notification (Mock)
             notificationService.sendNotification(ownerId, title, body);
 
-            // 2. Persist Notification for In-App Inbox
+            // 3. Persist Notification for In-App Inbox
             Notification notif = Notification.builder()
                     .id(UUID.randomUUID().toString())
                     .userId(ownerId)

@@ -79,15 +79,76 @@ public class ListingService {
     /**
      * Update an existing listing (owner edits after publish).
      */
-    public Listing updateListing(String id, Listing updatedListing) {
+    public Listing updateListing(String id, Listing updates) {
         Listing existing = getListing(id);
-        updatedListing.setId(id);
-        updatedListing.setCreatedAt(existing.getCreatedAt());
-        updatedListing.setUpdatedAt(LocalDateTime.now().toString());
-        if (updatedListing.getRent() != null) {
-            updatedListing.setAdvanceAmount(updatedListing.getRent() * 10);
+
+        // Basic Info
+        if (updates.getPropertyName() != null) existing.setPropertyName(updates.getPropertyName());
+        if (updates.getPlaceType() != null) existing.setPlaceType(updates.getPlaceType());
+        if (updates.getRoomType() != null) existing.setRoomType(updates.getRoomType());
+        if (updates.getAvailableFrom() != null) existing.setAvailableFrom(updates.getAvailableFrom());
+        if (updates.getFurnishingStatus() != null) existing.setFurnishingStatus(updates.getFurnishingStatus());
+        if (updates.getFloorPlan() != null) existing.setFloorPlan(updates.getFloorPlan());
+        if (updates.getFloorType() != null) existing.setFloorType(updates.getFloorType());
+        if (updates.getPropertyOnFloor() != null) existing.setPropertyOnFloor(updates.getPropertyOnFloor());
+        if (updates.getTotalFloors() != null) existing.setTotalFloors(updates.getTotalFloors());
+        if (updates.getAgeOfProperty() != null) existing.setAgeOfProperty(updates.getAgeOfProperty());
+        if (updates.getBalconyAvailable() != null) existing.setBalconyAvailable(updates.getBalconyAvailable());
+        
+        // Parking
+        if (updates.getCarParking() != null) existing.setCarParking(updates.getCarParking());
+        if (updates.getBikeParking() != null) existing.setBikeParking(updates.getBikeParking());
+
+        // Location
+        if (updates.getLatitude() != null) existing.setLatitude(updates.getLatitude());
+        if (updates.getLongitude() != null) existing.setLongitude(updates.getLongitude());
+        if (updates.getShowPreciseLocation() != null) existing.setShowPreciseLocation(updates.getShowPreciseLocation());
+        if (updates.getFlatHouseDetails() != null) existing.setFlatHouseDetails(updates.getFlatHouseDetails());
+        if (updates.getStreetAddress() != null) existing.setStreetAddress(updates.getStreetAddress());
+        if (updates.getLandmark() != null) existing.setLandmark(updates.getLandmark());
+        if (updates.getDistrict() != null) existing.setDistrict(updates.getDistrict());
+        if (updates.getPinCode() != null) existing.setPinCode(updates.getPinCode());
+        if (updates.getCity() != null) existing.setCity(updates.getCity());
+
+        // Features & Counts
+        if (updates.getBathroomType() != null) existing.setBathroomType(updates.getBathroomType());
+        if (updates.getOccupantType() != null) existing.setOccupantType(updates.getOccupantType());
+        if (updates.getLights() != null) existing.setLights(updates.getLights());
+        if (updates.getFans() != null) existing.setFans(updates.getFans());
+        if (updates.getAc() != null) existing.setAc(updates.getAc());
+        if (updates.getTv() != null) existing.setTv(updates.getTv());
+        if (updates.getBeds() != null) existing.setBeds(updates.getBeds());
+        if (updates.getWardrobes() != null) existing.setWardrobes(updates.getWardrobes());
+        if (updates.getGeysers() != null) existing.setGeysers(updates.getGeysers());
+        
+        // Amenities lists
+        if (updates.getAmenities() != null) existing.setAmenities(updates.getAmenities());
+        if (updates.getCustomAmenities() != null) existing.setCustomAmenities(updates.getCustomAmenities());
+        
+        // Rules
+        if (updates.getPetsAllowed() != null) existing.setPetsAllowed(updates.getPetsAllowed());
+        if (updates.getDrinkingAllowed() != null) existing.setDrinkingAllowed(updates.getDrinkingAllowed());
+        if (updates.getSmokingAllowed() != null) existing.setSmokingAllowed(updates.getSmokingAllowed());
+        if (updates.getPowerBackup() != null) existing.setPowerBackup(updates.getPowerBackup());
+
+        // Pricing & Policy
+        if (updates.getRent() != null) {
+            existing.setRent(updates.getRent());
+            existing.setAdvanceAmount(updates.getRent() * 10);
         }
-        return listingRepository.save(updatedListing);
+        if (updates.getMinRent() != null) existing.setMinRent(updates.getMinRent());
+        if (updates.getMaxRent() != null) existing.setMaxRent(updates.getMaxRent());
+        if (updates.getNoticePeriod() != null) existing.setNoticePeriod(updates.getNoticePeriod());
+
+        // Photos
+        if (updates.getPhotos() != null) existing.setPhotos(updates.getPhotos());
+
+        // Meta
+        if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
+        if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
+        
+        existing.setUpdatedAt(LocalDateTime.now().toString());
+        return listingRepository.save(existing);
     }
 
     /**
