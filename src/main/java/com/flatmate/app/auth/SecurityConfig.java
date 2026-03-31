@@ -28,6 +28,7 @@ public class SecurityConfig {
                                 "/auth/otp/send",
                                 "/auth/otp/verify",
                                 "/auth/refresh",
+                                "/location/**",
                                 "/chat-socket/**")
                         .permitAll()
                         // All other endpoints require a valid JWT

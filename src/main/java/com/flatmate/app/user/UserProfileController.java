@@ -45,6 +45,16 @@ public class UserProfileController {
         }
     }
 
+    @DeleteMapping("/{userId}/kyc")
+    public ResponseEntity<?> deleteKycAsset(@PathVariable String userId, @RequestParam String type) {
+        try {
+            userProfileService.deleteKycAsset(userId, type);
+            return ResponseEntity.ok("KYC asset deleted successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{userId}/kyc/upload-url")
     public ResponseEntity<Map<String, String>> getKycUploadUrl(
             @PathVariable String userId,

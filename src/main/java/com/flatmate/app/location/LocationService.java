@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,10 +41,13 @@ public class LocationService {
             String genderPreference, Integer minRooms) {
 
         return geoListingRepository.findAll().stream()
+                // Skip malformed geo rows instead of failing the whole request.
+                .filter(this::hasValidCoordinates)
                 // 1. Filter by distance
                 .filter(g -> calculateDistance(lat, lng, g.getLatitude(), g.getLongitude()) <= radiusKm)
                 // 2. Fetch the full listing
-                .map(g -> listingService.getListing(g.getListingId()))
+                .map(g -> safeGetListing(g.getListingId()))
+                .filter(Objects::nonNull)
                 // 3. Filter by min rent
                 .filter(l -> minRent == null || l.getRent() >= minRent)
                 // 4. Filter by max rent
@@ -55,6 +59,22 @@ public class LocationService {
                 // 6. Filter by minimum rooms available
                 .filter(l -> minRooms == null || l.getRoomsAvailable() >= minRooms)
                 .collect(Collectors.toList());
+    }
+
+    private boolean hasValidCoordinates(GeoListing geoListing) {
+        return geoListing != null
+                && geoListing.getLatitude() != null
+                && geoListing.getLongitude() != null
+                && geoListing.getListingId() != null
+                && !geoListing.getListingId().isBlank();
+    }
+
+    private com.flatmate.app.listing.Listing safeGetListing(String listingId) {
+        try {
+            return listingService.getListing(listingId);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     // Haversine-based distance calculation (returns km)

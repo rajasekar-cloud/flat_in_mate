@@ -4,14 +4,21 @@ import com.flatmate.app.auth.UserOnboardingEvaluator;
 import com.flatmate.app.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,6 +28,7 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final S3Presigner s3Presigner;
+    private final S3Client s3Client;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
@@ -143,7 +151,10 @@ public class ListingService {
         if (updates.getNoticePeriod() != null) existing.setNoticePeriod(updates.getNoticePeriod());
 
         // Photos
-        if (updates.getPhotos() != null) existing.setPhotos(updates.getPhotos());
+        if (updates.getPhotos() != null) {
+            deleteRemovedListingPhotos(existing.getPhotos(), updates.getPhotos());
+            existing.setPhotos(updates.getPhotos());
+        }
 
         // Meta
         if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
@@ -158,6 +169,8 @@ public class ListingService {
      */
     public void deactivateListing(String id) {
         Listing listing = getListing(id);
+        deleteObjectsByUrls(listing.getPhotos());
+        listing.setPhotos(new ArrayList<>());
         listing.setStatus("DEACTIVATED");
         listing.setUpdatedAt(LocalDateTime.now().toString());
         listingRepository.save(listing);
@@ -198,6 +211,104 @@ public class ListingService {
                 .build();
 
         return s3Presigner.presignPutObject(presignRequest).url().toString();
+    }
+
+    public void deleteObjectByUrl(String fileUrl) {
+        String key = extractKeyFromUrl(fileUrl);
+        if (key == null || key.isBlank()) {
+            return;
+        }
+
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build();
+        s3Client.deleteObject(deleteRequest);
+    }
+
+    public void deleteObjectsByUrls(List<String> fileUrls) {
+        if (fileUrls == null || fileUrls.isEmpty()) {
+            return;
+        }
+
+        for (String fileUrl : fileUrls) {
+            if (fileUrl != null && !fileUrl.isBlank()) {
+                deleteObjectByUrl(fileUrl);
+            }
+        }
+    }
+
+    private void deleteRemovedListingPhotos(List<String> existingPhotos, List<String> updatedPhotos) {
+        if (existingPhotos == null || existingPhotos.isEmpty()) {
+            return;
+        }
+
+        Set<String> updatedPhotoSet = updatedPhotos == null
+                ? Set.of()
+                : new HashSet<>(updatedPhotos.stream()
+                .filter(Objects::nonNull)
+                .toList());
+
+        for (String existingPhoto : existingPhotos) {
+            if (existingPhoto != null && !updatedPhotoSet.contains(existingPhoto)) {
+                deleteObjectByUrl(existingPhoto);
+            }
+        }
+    }
+
+    private String extractKeyFromUrl(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank()) {
+            return null;
+        }
+
+        try {
+            URI uri = URI.create(fileUrl.trim());
+            String host = uri.getHost();
+            String path = uri.getPath();
+            if (host == null || path == null || path.isBlank()) {
+                return normalizeKey(fileUrl);
+            }
+
+            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
+            if (normalizedPath.isBlank()) {
+                return null;
+            }
+
+            if (host.equals(bucketName + ".s3.amazonaws.com")
+                    || host.startsWith(bucketName + ".s3.")
+                    || host.equals(bucketName + ".s3-accelerate.amazonaws.com")) {
+                return normalizeKey(normalizedPath);
+            }
+
+            if (host.equals("s3.amazonaws.com") || host.startsWith("s3.")) {
+                String bucketPrefix = bucketName + "/";
+                if (normalizedPath.startsWith(bucketPrefix)) {
+                    return normalizeKey(normalizedPath.substring(bucketPrefix.length()));
+                }
+            }
+
+            return normalizeKey(normalizedPath);
+        } catch (IllegalArgumentException e) {
+            return normalizeKey(fileUrl);
+        }
+    }
+
+    private String normalizeKey(String key) {
+        if (key == null) {
+            return null;
+        }
+
+        String normalized = key.trim();
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+
+        String bucketPrefix = bucketName + "/";
+        if (normalized.startsWith(bucketPrefix)) {
+            normalized = normalized.substring(bucketPrefix.length());
+        }
+
+        return normalized;
     }
 
     private String detectContentType(String key) {
