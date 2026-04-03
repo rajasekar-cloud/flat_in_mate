@@ -24,7 +24,7 @@ public class LocationController {
     // Default flow: seeker sends current GPS → gets nearby flats
     // Filter flow: seeker changes location in filter → sends new lat/lng
     @GetMapping("/nearby")
-    public ResponseEntity<List<com.flatmate.app.listing.Listing>> getNearbyListings(
+    public ResponseEntity<List<NearbyListingResponse>> getNearbyListings(
             @RequestParam Double lat,
             @RequestParam Double lng,
             @RequestParam(defaultValue = "10.0") Double radius,
