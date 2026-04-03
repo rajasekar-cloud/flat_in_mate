@@ -3,12 +3,11 @@ package com.flatmate.app.user;
 import com.flatmate.app.auth.User;
 import com.flatmate.app.auth.UserOnboardingEvaluator;
 import com.flatmate.app.auth.UserRepository;
+import com.flatmate.app.listing.ListingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +15,7 @@ public class UserProfileService {
 
     private final UserRepository userRepository;
     private final CounterRepository counterRepository;
+    private final ListingService listingService;
 
     public void updateProfile(User profileUpdates) {
         if (profileUpdates.getUserId() == null) {
@@ -98,6 +98,8 @@ public class UserProfileService {
         }
 
         User user = getProfile(request.getUserId());
+        deleteReplacedKycFile(user.getKycDocumentImageUrl(), request.getDocumentImageUrl());
+        deleteReplacedKycFile(user.getKycSelfieImageUrl(), request.getSelfieImageUrl());
         user.setKycDocumentType(normalizeDocumentType(request.getDocumentType()));
         user.setKycDocumentImageUrl(request.getDocumentImageUrl().trim());
         user.setKycSelfieImageUrl(request.getSelfieImageUrl().trim());
@@ -105,6 +107,55 @@ public class UserProfileService {
         user.setKycCompletedAt(LocalDateTime.now().toString());
         updateOnboardingStatus(user);
         userRepository.save(user);
+    }
+
+    public void deleteKycAsset(String userId, String type) {
+        User user = getProfile(userId);
+        String normalizedType = normalizeKycAssetType(type);
+
+        if ("document".equals(normalizedType) || "all".equals(normalizedType)) {
+            listingService.deleteObjectByUrl(user.getKycDocumentImageUrl());
+            user.setKycDocumentImageUrl(null);
+            user.setKycDocumentType(null);
+        }
+
+        if ("selfie".equals(normalizedType) || "all".equals(normalizedType)) {
+            listingService.deleteObjectByUrl(user.getKycSelfieImageUrl());
+            user.setKycSelfieImageUrl(null);
+        }
+
+        user.setKycComplete(hasBothKycAssets(user));
+        if (!user.isKycComplete()) {
+            user.setKycCompletedAt(null);
+        }
+        updateOnboardingStatus(user);
+        userRepository.save(user);
+    }
+
+    private void deleteReplacedKycFile(String existingUrl, String newUrl) {
+        if (existingUrl == null || existingUrl.isBlank() || newUrl == null || newUrl.isBlank()) {
+            return;
+        }
+
+        if (!existingUrl.trim().equals(newUrl.trim())) {
+            listingService.deleteObjectByUrl(existingUrl);
+        }
+    }
+
+    private String normalizeKycAssetType(String type) {
+        return switch (type.trim().toUpperCase()) {
+            case "DOCUMENT", "ID_CARD", "DOC" -> "document";
+            case "SELFIE", "FACE" -> "selfie";
+            case "ALL" -> "all";
+            default -> throw new RuntimeException("Invalid KYC asset type. Allowed values: document, selfie, all");
+        };
+    }
+
+    private boolean hasBothKycAssets(User user) {
+        return user.getKycDocumentImageUrl() != null
+                && !user.getKycDocumentImageUrl().isBlank()
+                && user.getKycSelfieImageUrl() != null
+                && !user.getKycSelfieImageUrl().isBlank();
     }
 
     private void updateOnboardingStatus(User user) {
