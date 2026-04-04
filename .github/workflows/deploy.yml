@@ -112,7 +112,10 @@ jobs:
           if ! command -v docker &> /dev/null; then
               echo "Installing Docker..."
               sudo dnf update -y
-              sudo dnf install -y docker docker-compose-plugin
+              sudo dnf install -y docker
+              sudo mkdir -p /usr/libexec/docker/cli-plugins
+              sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m) -o /usr/libexec/docker/cli-plugins/docker-compose
+              sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
               sudo systemctl enable docker
               sudo systemctl start docker
           fi
