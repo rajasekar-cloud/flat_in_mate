@@ -108,6 +108,12 @@ jobs:
           set -e
           cd /home/ec2-user/flatmate
           
+          echo ">>> 0. Waiting for Server's UserData to finish installing Docker..."
+          while ! command -v docker &> /dev/null; do
+              echo "Docker is not yet installed. Waiting 10 seconds..."
+              sleep 10
+          done
+          
           echo ">>> 1. Stopping existing containers..."
           sudo docker compose down --remove-orphans || true
 
