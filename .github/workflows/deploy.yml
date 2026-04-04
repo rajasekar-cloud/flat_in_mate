@@ -109,7 +109,7 @@ jobs:
           cd /home/ec2-user/flatmate
           
           echo ">>> 0. Checking Docker installation..."
-          if ! command -v docker &> /dev/null; do
+          if ! command -v docker &> /dev/null; then
               echo "Installing Docker..."
               sudo dnf update -y
               sudo dnf install -y docker docker-compose-plugin
