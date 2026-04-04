@@ -62,6 +62,13 @@ jobs:
         
         echo "EC2_HOST=$PUBLIC_IP" >> $GITHUB_ENV
         echo "🚀 Server is running at: $PUBLIC_IP"
+        
+        API_GATEWAY_URL=$(aws cloudformation describe-stacks \
+          --stack-name flatmate-app-server \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+          --output text)
+          
+        echo "🌐 API Gateway Endpoint: $API_GATEWAY_URL"
 
     - name: Set up JDK 17
       uses: actions/setup-java@v3
