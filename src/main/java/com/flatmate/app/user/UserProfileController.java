@@ -70,6 +70,33 @@ public class UserProfileController {
                 "type", normalizedType));
     }
 
+    @GetMapping("/{userId}/kyc/view-url")
+    public ResponseEntity<Map<String, String>> getKycViewUrl(
+            @PathVariable String userId,
+            @RequestParam String type) {
+
+        User user = userProfileService.getProfile(userId);
+        String normalizedType = normalizeKycUploadType(type);
+
+        String storedUrl = null;
+        if ("selfie".equals(normalizedType)) {
+            storedUrl = user.getKycSelfieImageUrl();
+        } else if ("document".equals(normalizedType)) {
+            storedUrl = user.getKycDocumentImageUrl();
+        }
+
+        if (storedUrl == null || storedUrl.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No " + normalizedType + " image found for this user"));
+        }
+
+        String viewUrl = listingService.generateViewUrl(storedUrl);
+        return ResponseEntity.ok(Map.of(
+                "viewUrl", viewUrl,
+                "type", normalizedType
+        ));
+    }
+
+
     @PostMapping("/{userId}/owner")
     public ResponseEntity<?> registerAsOwner(@PathVariable String userId) {
         try {
