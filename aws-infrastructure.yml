@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Flatmate App EC2 Configuration - t3.micro, 8GB gp3, Detailed Monitoring, Daily Snapshots'
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  InstanceType:
+    Description: Compute Configuration (t3.micro = 2 vCPU, 1 GiB Memory)
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+
+  LatestAmiId:
+    Description: SSM Parameter path for the latest Amazon Linux 2023 AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+
+Resources:
+  FlatmateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP, HTTPS, and SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          
+  FlatmateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups: 
+        - !Ref FlatmateSecurityGroup
+      ImageId: !Ref LatestAmiId
+      Monitoring: true # Detailed Monitoring Enabled
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 8 # 8 Gb storage
+            Iops: 3000 # 3000 IOPS
+            DeleteOnTermination: false
+      Tags:
+        - Key: Name
+          Value: FlatmateApp-Server
+        - Key: backup
+          Value: daily
+
+  DlmLifecycleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: dlm.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole
+
+  DailySnapshotPolicy:
+    Type: AWS::DLM::LifecyclePolicy
+    Properties:
+      Description: "Daily backups for Flatmate application EC2 instances."
+      State: ENABLED
+      ExecutionRoleArn: !GetAtt DlmLifecycleRole.Arn
+      PolicyDetails:
+        ResourceTypes:
+          - INSTANCE
+        TargetTags:
+          - Key: backup
+            Value: daily
+        Schedules:
+          - Name: "Daily Snapshots"
+            TagsToAdd:
+              - Key: type
+                Value: AutomatedBackup
+            CreateRule:
+              Interval: 24
+              IntervalUnit: HOURS
+              Times:
+                - "00:00" # Midnight UTC
+            RetainRule:
+              Count: 7 # Keeps the last 7 days of backups
+
+Outputs:
+  InstanceId:
+    Description: Instance ID
+    Value: !Ref FlatmateInstance
+  PublicIp:
+    Description: Public IP of the Instance
+    Value: !GetAtt FlatmateInstance.PublicIp

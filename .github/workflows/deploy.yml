@@ -15,7 +15,7 @@ jobs:
     - name: Pre-flight Check (Verify Secrets)
       run: |
         echo ">>> Starting Secret Verification..."
-        REQUIRED_VARS=("EC2_HOST" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET")
+        REQUIRED_VARS=("AWS_SSH_KEY_NAME" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET")
         for var_name in "${REQUIRED_VARS[@]}"; do
           echo "Checking $var_name..."
           if [ -z "${!var_name}" ]; then
@@ -25,7 +25,7 @@ jobs:
         done
         echo "✅ All required secrets are verified and present."
       env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
+        AWS_SSH_KEY_NAME: ${{ secrets.AWS_SSH_KEY_NAME }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -36,6 +36,32 @@ jobs:
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
         RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy AWS Infrastructure
+      id: deploy-infra
+      run: |
+        echo ">>> Deploying AWS Infrastructure via CloudFormation..."
+        aws cloudformation deploy \
+          --template-file aws-infrastructure.yml \
+          --stack-name flatmate-app-server \
+          --parameter-overrides KeyName=${{ secrets.AWS_SSH_KEY_NAME }} \
+          --capabilities CAPABILITY_NAMED_IAM
+        
+        echo ">>> Fetching Public IP of the created/updated Server..."
+        PUBLIC_IP=$(aws cloudformation describe-stacks \
+          --stack-name flatmate-app-server \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicIp`].OutputValue' \
+          --output text)
+        
+        echo "EC2_HOST=$PUBLIC_IP" >> $GITHUB_ENV
+        echo "🚀 Server is running at: $PUBLIC_IP"
 
     - name: Set up JDK 17
       uses: actions/setup-java@v3
@@ -50,7 +76,7 @@ jobs:
     - name: Prepare Server (Clean old code)
       uses: appleboy/ssh-action@v0.1.10
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ env.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         debug: true
@@ -63,7 +89,7 @@ jobs:
     - name: Deploy Code via SCP
       uses: appleboy/scp-action@v0.1.4
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ env.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         debug: true
@@ -74,7 +100,7 @@ jobs:
     - name: Rebuild and Start Containers via SSH
       uses: appleboy/ssh-action@v0.1.10
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ env.EC2_HOST }}
         username: ec2-user
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         debug: true
