@@ -111,29 +111,7 @@ Resources:
     Properties:
       Name: FlatmateApp-Proxy
       ProtocolType: HTTP
-
-  FlatmateApiIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref FlatmateHttpApi
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub "http://${FlatmateInstance.PublicIp}/{proxy}"
-      PayloadFormatVersion: "1.0"
-
-  FlatmateApiRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref FlatmateHttpApi
-      RouteKey: "$default"
-      Target: !Join [ "/", [ "integrations", !Ref FlatmateApiIntegration ] ]
-
-  FlatmateApiStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref FlatmateHttpApi
-      StageName: "$default"
-      AutoDeploy: true
+      Target: !Sub "http://${FlatmateInstance.PublicIp}"
 
 Outputs:
   InstanceId:
