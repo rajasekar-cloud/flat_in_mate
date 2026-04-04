@@ -76,7 +76,7 @@ Resources:
   DailySnapshotPolicy:
     Type: AWS::DLM::LifecyclePolicy
     Properties:
-      Description: "Daily backups for Flatmate application EC2 instances."
+      Description: "Daily backups for Flatmate application EC2 instances"
       State: ENABLED
       ExecutionRoleArn: !GetAtt DlmLifecycleRole.Arn
       PolicyDetails:
