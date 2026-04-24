@@ -158,13 +158,11 @@ jobs:
     - name: Validate Deployment (Health Check)
       run: |
         echo ">>> Waiting for application to start..."
-        sleep 40 # Spring Boot takes time to start
+        sleep 40
         
-        # Use the API Gateway URL from the earlier step
         HEALTH_URL="${{ steps.deploy-infra.outputs.api_gateway_url }}/health"
         echo ">>> Checking Health at: $HEALTH_URL"
         
-        # Retry logic: Try 6 times with 10s intervals
         for i in {1..6}; do
           echo "Attempt $i..."
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
@@ -176,6 +174,21 @@ jobs:
           sleep 10
         done
         
-        echo "::error::❌ FAILURE: The application failed to start or is returning 502/404."
-        echo "Please check 'sudo docker logs flatmate-backend' on the EC2 server."
+        echo "::error::❌ FAILURE: The application failed to start."
+        echo ">>> FETCHING BACKEND ERROR LOGS FOR DEBUGGING..."
         exit 1
+
+    - name: Fetch Debug Logs on Failure
+      if: failure()
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "--- DOCKER CONTAINER STATUS ---"
+          sudo docker ps -a
+          echo "--- BACKEND APPLICATION LOGS ---"
+          sudo docker logs flatmate-backend --tail 100
+          echo "--- NGINX ERROR LOGS ---"
+          sudo docker logs flatmate-nginx --tail 20
