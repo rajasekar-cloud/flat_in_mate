@@ -83,18 +83,23 @@ public class UserProfileService {
         userRepository.save(user);
     }
 
-    public void completeKyc(KycUpdateRequest request) {
+    /**
+     * Stores KYC document and selfie image URLs to S3.
+     * NOTE: This does NOT mark kycComplete = true.
+     * Identity verification must be done via SurePass API (/profiles/kyc/aadhaar, /pan, /dl, /voter).
+     */
+    public void storeKycImages(KycUpdateRequest request) {
         if (request.getUserId() == null || request.getUserId().isBlank()) {
-            throw new RuntimeException("User ID is required for KYC");
+            throw new RuntimeException("User ID is required");
         }
         if (request.getDocumentType() == null || request.getDocumentType().isBlank()) {
-            throw new RuntimeException("Document type is required for KYC");
+            throw new RuntimeException("Document type is required");
         }
         if (request.getDocumentImageUrl() == null || request.getDocumentImageUrl().isBlank()) {
-            throw new RuntimeException("Document image URL is required for KYC");
+            throw new RuntimeException("Document image URL is required");
         }
         if (request.getSelfieImageUrl() == null || request.getSelfieImageUrl().isBlank()) {
-            throw new RuntimeException("Selfie image URL is required for KYC");
+            throw new RuntimeException("Selfie image URL is required");
         }
 
         User user = getProfile(request.getUserId());
@@ -103,9 +108,8 @@ public class UserProfileService {
         user.setKycDocumentType(normalizeDocumentType(request.getDocumentType()));
         user.setKycDocumentImageUrl(request.getDocumentImageUrl().trim());
         user.setKycSelfieImageUrl(request.getSelfieImageUrl().trim());
-        user.setKycComplete(true);
-        user.setKycCompletedAt(LocalDateTime.now().toString());
-        updateOnboardingStatus(user);
+        // kycComplete is intentionally NOT set here.
+        // Only SurePass verification sets kycComplete = true.
         userRepository.save(user);
     }
 
@@ -116,7 +120,11 @@ public class UserProfileService {
         if ("document".equals(normalizedType) || "all".equals(normalizedType)) {
             listingService.deleteObjectByUrl(user.getKycDocumentImageUrl());
             user.setKycDocumentImageUrl(null);
-            user.setKycDocumentType(null);
+            // Only clear documentType if the user is not SurePass-verified
+            // (SurePass-verified users keep their documentType from govt verification)
+            if (!user.isKycSurepassVerified()) {
+                user.setKycDocumentType(null);
+            }
         }
 
         if ("selfie".equals(normalizedType) || "all".equals(normalizedType)) {
@@ -124,10 +132,13 @@ public class UserProfileService {
             user.setKycSelfieImageUrl(null);
         }
 
-        user.setKycComplete(hasBothKycAssets(user));
-        if (!user.isKycComplete()) {
+        // Only reset kycComplete if the user was NOT verified via SurePass.
+        // Deleting an uploaded image must not undo a government-verified identity.
+        if (!user.isKycSurepassVerified()) {
+            user.setKycComplete(false);
             user.setKycCompletedAt(null);
         }
+
         updateOnboardingStatus(user);
         userRepository.save(user);
     }
@@ -151,13 +162,6 @@ public class UserProfileService {
         };
     }
 
-    private boolean hasBothKycAssets(User user) {
-        return user.getKycDocumentImageUrl() != null
-                && !user.getKycDocumentImageUrl().isBlank()
-                && user.getKycSelfieImageUrl() != null
-                && !user.getKycSelfieImageUrl().isBlank();
-    }
-
     private void updateOnboardingStatus(User user) {
         user.setOnboardingComplete(UserOnboardingEvaluator.isOnboardingCompleteForActiveRole(user));
     }
@@ -168,8 +172,9 @@ public class UserProfileService {
             case "DRIVING_LICENCE", "DRIVING_LICENSE" -> "DRIVING_LICENSE";
             case "VOTER", "VOTER_ID" -> "VOTER_ID";
             case "PASSPORT" -> "PASSPORT";
+            case "PAN", "PAN_CARD" -> "PAN_CARD";
             default -> throw new RuntimeException(
-                    "Invalid document type. Allowed values: AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT");
+                    "Invalid document type. Allowed values: AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT, PAN_CARD");
         };
     }
 }

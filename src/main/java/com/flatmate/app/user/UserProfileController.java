@@ -36,10 +36,10 @@ public class UserProfileController {
     }
 
     @PostMapping("/kyc")
-    public ResponseEntity<?> completeKyc(@RequestBody KycUpdateRequest request) {
+    public ResponseEntity<?> storeKycImages(@RequestBody KycUpdateRequest request) {
         try {
-            userProfileService.completeKyc(request);
-            return ResponseEntity.ok("KYC completed successfully");
+            userProfileService.storeKycImages(request);
+            return ResponseEntity.ok("KYC documents uploaded successfully. Please complete identity verification via Aadhaar, PAN, DL, or Voter ID.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

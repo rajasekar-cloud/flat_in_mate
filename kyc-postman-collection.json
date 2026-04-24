@@ -1,0 +1,794 @@
+{
+  "info": {
+    "name": "FlatMate App — KYC Verification Flow",
+    "description": "Postman collection for testing the SurePass-backed KYC verification APIs.\n\n**Base URL:** Set {{baseUrl}} to:\n  - Local:      http://localhost:8081\n  - Production: https://hjqqy3z9r1.execute-api.ap-south-1.amazonaws.com/prod\n\n**Pre-requisite before running any KYC request:**\n  1. Run Auth → Send OTP → Verify OTP to get a valid `accessToken`\n  2. Paste the token into the `token` collection variable below\n  3. Set `userId` to your test user's phone number (e.g. +919876543210)\n\n**Two separate KYC flows are covered:**\n  A. Aadhaar (2-step: generate OTP → verify OTP)\n  B. PAN / Driving Licence / Voter ID (1-step instant)\n  + Image Upload (stores S3 URLs but does NOT mark kycComplete)\n\n**Auto-saved variables:**\n  - `aadhaarClientId` — saved by Step A-1, used automatically in Step A-2\n\n**What marks kycComplete = true?**\n  Only the SurePass verify endpoints (Aadhaar/PAN/DL/Voter). The image upload endpoint does NOT.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "description": "Change to production URL when testing on live server."
+    },
+    {
+      "key": "token",
+      "value": "<paste accessToken here>",
+      "description": "JWT access token from Verify OTP response."
+    },
+    {
+      "key": "userId",
+      "value": "+919876543210",
+      "description": "Logged-in user's phone number (used as userId)."
+    },
+    {
+      "key": "aadhaarClientId",
+      "value": "",
+      "description": "Auto-saved after Step A-1 (Generate Aadhaar OTP). Used in Step A-2 (Verify OTP)."
+    },
+    {
+      "key": "kycDocumentUrl",
+      "value": "",
+      "description": "Auto-saved after getting KYC document upload URL."
+    },
+    {
+      "key": "kycSelfieUrl",
+      "value": "",
+      "description": "Auto-saved after getting KYC selfie upload URL."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Pre-Check — Get Profile (before KYC)",
+      "request": {
+        "method": "GET",
+        "description": "Fetch your profile BEFORE doing KYC to confirm:\n  - kycComplete = false\n  - kycSurepassVerified = false\n  - onboardingComplete = false\n\nRun this again AFTER KYC to confirm all three flip to true.",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/profiles/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["profiles", "{{userId}}"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile fetched - 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "console.log('--- Pre-KYC Status ---');",
+              "console.log('kycComplete:', json.kycComplete);",
+              "console.log('kycSurepassVerified:', json.kycSurepassVerified);",
+              "console.log('kycDocumentType:', json.kycDocumentType);",
+              "console.log('kycVerifiedName:', json.kycVerifiedName);",
+              "console.log('onboardingComplete:', json.onboardingComplete);",
+              "",
+              "pm.test('kycComplete starts as false (pre-KYC check)', function () {",
+              "    pm.expect(json.kycComplete).to.be.false;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow A — Aadhaar KYC (2-step OTP)",
+      "description": "Two-step Aadhaar verification using UIDAI OTP:\n  Step A-1: Send Aadhaar number → OTP is delivered to user's registered mobile\n  Step A-2: Submit OTP → identity confirmed → kycComplete = true\n\nIMPORTANT: Use a REAL Aadhaar number in production. In SurePass sandbox, use their test Aadhaar numbers from the dashboard.",
+      "item": [
+        {
+          "name": "A-1. Generate Aadhaar OTP",
+          "request": {
+            "method": "POST",
+            "description": "Sends the Aadhaar number to SurePass → SurePass triggers UIDAI → OTP is sent to the mobile number registered with that Aadhaar.\n\nResponse contains `clientId` which is auto-saved to {{aadhaarClientId}}.\nUse that clientId in Step A-2.\n\nSandbox test Aadhaar: Check your SurePass dashboard for sandbox test numbers.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/aadhaar/generate-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "aadhaar", "generate-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aadhaarNumber\": \"999941057058\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Generate Aadhaar OTP - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "",
+                  "pm.test('Response contains clientId', function () {",
+                  "    pm.expect(json).to.have.property('clientId');",
+                  "    pm.expect(json.clientId).to.not.be.empty;",
+                  "});",
+                  "",
+                  "if (json.clientId) {",
+                  "    pm.collectionVariables.set('aadhaarClientId', json.clientId);",
+                  "    console.log('clientId auto-saved to {{aadhaarClientId}}:', json.clientId);",
+                  "    console.log('Now go check OTP on Aadhaar-registered mobile, then run Step A-2.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A-2. Verify Aadhaar OTP",
+          "request": {
+            "method": "POST",
+            "description": "Submits the OTP received on the user's Aadhaar-registered mobile. On success:\n  - kycComplete = true\n  - kycSurepassVerified = true\n  - kycVerifiedName = name from UIDAI database\n  - onboardingComplete = recalculated\n\nPre-requisite: Run Step A-1 first. {{aadhaarClientId}} is auto-filled from A-1.\nFill in the `otp` field with what the user received on their mobile.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/aadhaar/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "aadhaar", "verify-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"clientId\": \"{{aadhaarClientId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Verify Aadhaar OTP - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Success message returned', function () {",
+                  "    pm.expect(json.message).to.include('verified');",
+                  "});",
+                  "",
+                  "console.log('Aadhaar KYC verified! Now run Step 0 again to confirm kycComplete = true.');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flow B — PAN KYC (Instant)",
+      "description": "Instant PAN verification via NSDL. No OTP required. Single API call.\n\nOn success: kycComplete = true, kycSurepassVerified = true, kycVerifiedName = name from NSDL.\n\nSandbox test PAN: Check your SurePass dashboard for test PAN numbers.",
+      "item": [
+        {
+          "name": "B-1. Verify PAN",
+          "request": {
+            "method": "POST",
+            "description": "Verifies PAN number against NSDL. Returns verified name from Income Tax records.\n\nPAN format: 5 uppercase letters + 4 digits + 1 uppercase letter (e.g. ABCDE1234F).\n\nSandbox: Use test PAN from SurePass dashboard.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/pan/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "pan", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"panNumber\": \"ABCDE1234F\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PAN Verify - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Success message returned', function () {",
+                  "    pm.expect(json.message).to.include('verified');",
+                  "});",
+                  "",
+                  "console.log('PAN KYC verified! Run Step 0 to confirm kycComplete = true.');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flow C — Driving Licence KYC (Instant)",
+      "description": "Instant Driving Licence verification via Sarathi (Govt of India). No OTP required.\n\nRequires: DL number + DOB in YYYY-MM-DD format.",
+      "item": [
+        {
+          "name": "C-1. Verify Driving Licence",
+          "request": {
+            "method": "POST",
+            "description": "Verifies the DL number and DOB against the Sarathi government database.\n\nDL Number format varies by state (e.g. KA01-20110001234).\nDOB format: YYYY-MM-DD\n\nSandbox: Use test DL from SurePass dashboard.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/dl/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "dl", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"dlNumber\": \"KA01-20110001234\",\n  \"dob\": \"1995-06-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('DL Verify - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Success message returned', function () {",
+                  "    pm.expect(json.message).to.include('verified');",
+                  "});",
+                  "",
+                  "console.log('Driving Licence KYC verified! Run Step 0 to confirm kycComplete = true.');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flow D — Voter ID KYC (Instant)",
+      "description": "Instant Voter ID (EPIC) verification via ECI database. No OTP required.",
+      "item": [
+        {
+          "name": "D-1. Verify Voter ID",
+          "request": {
+            "method": "POST",
+            "description": "Verifies Voter ID against Election Commission of India (ECI) records.\n\nVoter ID format: State code + alphanumeric (e.g. XYZ1234567).\n\nSandbox: Use test Voter ID from SurePass dashboard.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/voter/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "voter", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"voterId\": \"XYZ1234567\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Voter ID Verify - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Success message returned', function () {",
+                  "    pm.expect(json.message).to.include('verified');",
+                  "});",
+                  "",
+                  "console.log('Voter ID KYC verified! Run Step 0 to confirm kycComplete = true.');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Image Upload (Optional — store docs on S3)",
+      "description": "These endpoints store document images to S3. They do NOT mark kycComplete.\nUse these alongside SurePass verification to keep physical document images for records.\n\nFlow:\n  1. Get upload URL (presigned S3 PUT URL)\n  2. Upload image directly to S3 via PUT (outside Postman or use a file upload tool)\n  3. Store the resulting S3 URL via POST /profiles/kyc",
+      "item": [
+        {
+          "name": "IMG-1. Get KYC Document Upload URL",
+          "request": {
+            "method": "GET",
+            "description": "Returns a pre-signed S3 PUT URL for uploading a document image (Aadhaar front, PAN card etc.).\n\nQuery params:\n  - fileName: name of the file (e.g. aadhaar-front.jpg)\n  - type: 'document'\n\nThe test auto-saves the S3 file URL to {{kycDocumentUrl}}.",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=aadhaar-front.jpg&type=document",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "{{userId}}", "kyc", "upload-url"],
+              "query": [
+                { "key": "fileName", "value": "aadhaar-front.jpg" },
+                { "key": "type", "value": "document" }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Got document upload URL - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Response has url field', function () {",
+                  "    pm.expect(json).to.have.property('url');",
+                  "});",
+                  "",
+                  "if (json.filePath) {",
+                  "    pm.collectionVariables.set('kycDocumentUrl', json.filePath);",
+                  "    console.log('kycDocumentUrl saved:', json.filePath);",
+                  "}",
+                  "if (json.url) {",
+                  "    console.log('--- NEXT STEP ---');",
+                  "    console.log('Use this URL for a PUT request with your document image file:');",
+                  "    console.log(json.url);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "IMG-2. Get KYC Selfie Upload URL",
+          "request": {
+            "method": "GET",
+            "description": "Returns a pre-signed S3 PUT URL for uploading a selfie photo.\n\nQuery params:\n  - fileName: name of the file (e.g. selfie.jpg)\n  - type: 'selfie'\n\nThe test auto-saves the S3 file path to {{kycSelfieUrl}}.",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=selfie.jpg&type=selfie",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "{{userId}}", "kyc", "upload-url"],
+              "query": [
+                { "key": "fileName", "value": "selfie.jpg" },
+                { "key": "type", "value": "selfie" }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Got selfie upload URL - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "if (json.filePath) {",
+                  "    pm.collectionVariables.set('kycSelfieUrl', json.filePath);",
+                  "    console.log('kycSelfieUrl saved:', json.filePath);",
+                  "}",
+                  "if (json.url) {",
+                  "    console.log('--- NEXT STEP ---');",
+                  "    console.log('Use this URL for a PUT request with your selfie image file:');",
+                  "    console.log(json.url);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "IMG-3. Store KYC Image URLs",
+          "request": {
+            "method": "POST",
+            "description": "Stores the S3 image URLs against the user's profile.\n\n⚠️ THIS DOES NOT MARK kycComplete = true.\nThis only stores the document image references.\nYou must still complete one of the SurePass verification flows (A/B/C/D) for kycComplete.\n\nRun after IMG-1 and IMG-2 and uploading to S3.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"documentType\": \"AADHAR_CARD\",\n  \"documentImageUrl\": \"{{kycDocumentUrl}}\",\n  \"selfieImageUrl\": \"{{kycSelfieUrl}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('KYC images stored - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response does NOT say KYC completed', function () {",
+                  "    var body = pm.response.text();",
+                  "    pm.expect(body).to.not.include('KYC completed successfully');",
+                  "    pm.expect(body).to.include('uploaded');",
+                  "});",
+                  "",
+                  "console.log('Images stored. Remember: kycComplete is still FALSE until you run a SurePass verify step.');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "IMG-4. View Stored KYC Document",
+          "request": {
+            "method": "GET",
+            "description": "Returns a pre-signed S3 GET URL to securely view the stored KYC document image.\n\nQuery param:\n  - type: 'document' or 'selfie'",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/view-url?type=document",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "{{userId}}", "kyc", "view-url"],
+              "query": [
+                { "key": "type", "value": "document" }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Got KYC view URL - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Response has viewUrl', function () {",
+                  "    pm.expect(json).to.have.property('viewUrl');",
+                  "});",
+                  "",
+                  "if (json.viewUrl) {",
+                  "    console.log('Open this URL in browser to view document:', json.viewUrl);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "IMG-5. Delete KYC Images",
+          "request": {
+            "method": "DELETE",
+            "description": "Deletes the stored KYC image(s) from S3.\n\nQuery param `type`:\n  - 'document' — removes document image only\n  - 'selfie'   — removes selfie only\n  - 'all'      — removes both\n\n⚠️ If user is SurePass-verified (kycSurepassVerified = true), deleting images will NOT reset kycComplete. Only non-verified users lose their kycComplete status.",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/{{userId}}/kyc?type=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "{{userId}}", "kyc"],
+              "query": [
+                { "key": "type", "value": "all" }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('KYC images deleted - 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "console.log('Images deleted. If user was SurePass-verified, kycComplete is still true.');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validation Tests — Error Cases",
+      "description": "Tests to verify that the API correctly rejects invalid inputs. All of these should return 400 Bad Request.",
+      "item": [
+        {
+          "name": "ERR-1. Aadhaar — Missing aadhaarNumber",
+          "request": {
+            "method": "POST",
+            "description": "Should return 400 — aadhaarNumber is required.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/aadhaar/generate-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "aadhaar", "generate-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing aadhaarNumber returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message mentions aadhaarNumber', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('aadhaarNumber');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ERR-2. Aadhaar — Invalid format (not 12 digits)",
+          "request": {
+            "method": "POST",
+            "description": "Should return 400 — Aadhaar must be exactly 12 digits.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/aadhaar/generate-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "aadhaar", "generate-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aadhaarNumber\": \"1234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid Aadhaar format returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error mentions 12 digits', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('12 digits');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ERR-3. PAN — Invalid format",
+          "request": {
+            "method": "POST",
+            "description": "Should return 400 — PAN must follow ABCDE1234F format.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/pan/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "pan", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"panNumber\": \"INVALIDPAN\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid PAN format returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message mentions PAN format', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('PAN format');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ERR-4. OTP Verify — Missing clientId",
+          "request": {
+            "method": "POST",
+            "description": "Should return 400 — clientId is required for OTP verification.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/aadhaar/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "aadhaar", "verify-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing clientId returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message mentions clientId', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.error).to.include('clientId');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ERR-5. No JWT — Unauthorized",
+          "request": {
+            "method": "POST",
+            "description": "Should return 401/403 — All KYC endpoints require a valid JWT.",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profiles/kyc/pan/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["profiles", "kyc", "pan", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"panNumber\": \"ABCDE1234F\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No JWT returns 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Z. Post-KYC — Confirm Profile State",
+      "request": {
+        "method": "GET",
+        "description": "Run this AFTER completing any SurePass verification step (A/B/C/D).\n\nConfirm in the response:\n  ✅ kycComplete = true\n  ✅ kycSurepassVerified = true\n  ✅ kycDocumentType = AADHAR_CARD / PAN_CARD / DRIVING_LICENSE / VOTER_ID\n  ✅ kycVerifiedName = name from government database\n  ✅ onboardingComplete = true (if basic profile + role are also set)",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/profiles/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["profiles", "{{userId}}"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile fetched - 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "console.log('--- Post-KYC Status ---');",
+              "console.log('kycComplete:', json.kycComplete);",
+              "console.log('kycSurepassVerified:', json.kycSurepassVerified);",
+              "console.log('kycDocumentType:', json.kycDocumentType);",
+              "console.log('kycVerifiedName:', json.kycVerifiedName);",
+              "console.log('onboardingComplete:', json.onboardingComplete);",
+              "",
+              "pm.test('kycComplete = true after SurePass verify', function () {",
+              "    pm.expect(json.kycComplete).to.be.true;",
+              "});",
+              "pm.test('kycSurepassVerified = true', function () {",
+              "    pm.expect(json.kycSurepassVerified).to.be.true;",
+              "});",
+              "pm.test('kycVerifiedName is present', function () {",
+              "    pm.expect(json.kycVerifiedName).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('kycDocumentType is set', function () {",
+              "    pm.expect(json.kycDocumentType).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,11 +4,18 @@ import com.flatmate.app.auth.User;
 import com.flatmate.app.auth.UserRepository;
 import com.flatmate.app.listing.Listing;
 import com.flatmate.app.listing.ListingService;
+import com.flatmate.app.swipe.Swipe;
+import com.flatmate.app.swipe.SwipeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.geo.Circle;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.Metrics;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,14 +25,19 @@ public class LocationService {
         private final GeoListingRepository geoListingRepository;
         private final ListingService listingService;
         private final UserRepository userRepository;
+        private final SwipeRepository swipeRepository;
+        private final StringRedisTemplate redisTemplate;
 
-        // ✅ Safe insert (prevents bad DB data)
+        private static final String GEO_KEY = "geo:listings";
+
+        // ✅ Index listing (DB + Redis)
         public void indexListing(String listingId, Double lat, Double lng) {
 
                 if (listingId == null || lat == null || lng == null) {
-                        throw new IllegalArgumentException("Invalid geo data: listingId/lat/lng cannot be null");
+                        throw new IllegalArgumentException("Invalid geo data");
                 }
 
+                // Save in DB
                 GeoListing geo = GeoListing.builder()
                                 .listingId(listingId)
                                 .latitude(lat)
@@ -33,61 +45,77 @@ public class LocationService {
                                 .build();
 
                 geoListingRepository.save(geo);
+
+                // 🔥 Save in Redis GEO
+                redisTemplate.opsForGeo().add(
+                                GEO_KEY,
+                                new Point(lng, lat),
+                                listingId);
         }
 
+        // ✅ Main optimized method
         public List<NearbyListingResponse> findNearbyListings(
+                        String currentUserId,
                         double lat, double lng, double radiusKm,
                         Double minRent, Double maxRent,
                         String genderPreference, Integer minRooms) {
 
-                return geoListingRepository.findAll().stream()
+                // ✅ Get swiped listings
+                final Set<String> swipedListingIds = (currentUserId != null && !currentUserId.isEmpty())
+                                ? swipeRepository.findBySeekerId(currentUserId)
+                                                .stream()
+                                                .map(Swipe::getListingId)
+                                                .collect(Collectors.toSet())
+                                : new HashSet<>();
 
-                                // ✅ 1. Remove invalid geo records (fix for NPE)
-                                .filter(g -> {
-                                        if (g.getLatitude() == null || g.getLongitude() == null) {
-                                                System.out.println("⚠️ Skipping GeoListing with NULL lat/lng. GeoId: "
-                                                                + g.getPk());
-                                                return false;
-                                        }
-                                        return true;
-                                })
+                // ✅ Redis GEO search
+                Circle circle = new Circle(
+                                new Point(lng, lat),
+                                new Distance(radiusKm, Metrics.KILOMETERS));
 
-                                // ✅ 2. Distance filter (safe now)
-                                .filter(g -> calculateDistance(lat, lng, g.getLatitude(), g.getLongitude()) <= radiusKm)
+                List<String> nearbyListingIds = redisTemplate.opsForGeo()
+                                .radius(GEO_KEY, circle,
+                                                RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
+                                                                .includeDistance()
+                                                                .sortAscending())
+                                .getContent()
+                                .stream()
+                                .map(r -> r.getContent().getName())
+                                .collect(Collectors.toList());
 
-                                // ✅ 3. Remove invalid listingId
-                                .filter(g -> {
-                                        if (g.getListingId() == null) {
-                                                System.out.println("⚠️ Skipping GeoListing with NULL listingId. GeoId: "
-                                                                + g.getPk());
-                                                return false;
-                                        }
-                                        return true;
-                                })
+                // ✅ Fetch listings + apply filters
+                return nearbyListingIds.stream()
 
-                                // ✅ 4. Fetch listing safely
-                                .map(g -> {
+                                .map(id -> {
                                         try {
-                                                return listingService.getListing(g.getListingId());
+                                                return listingService.getListing(id);
                                         } catch (Exception e) {
-                                                System.out.println("❌ Failed to fetch listing for ID: "
-                                                                + g.getListingId());
+                                                System.out.println("❌ Failed to fetch listing: " + id);
                                                 return null;
                                         }
                                 })
 
-                                // ✅ 5. Remove failed fetch
                                 .filter(Objects::nonNull)
 
-                                // ✅ 6. Apply filters
+                                // 🔥 Business filters
+                                .filter(l -> currentUserId == null || currentUserId.isEmpty()
+                                                || !swipedListingIds.contains(l.getId()))
+
+                                .filter(l -> currentUserId == null || currentUserId.isEmpty()
+                                                || !currentUserId.equals(l.getOwnerId()))
+
+                                .filter(l -> "PUBLISHED".equalsIgnoreCase(l.getStatus()))
+
                                 .filter(l -> minRent == null || l.getRent() >= minRent)
                                 .filter(l -> maxRent == null || l.getRent() <= maxRent)
+
                                 .filter(l -> genderPreference == null
                                                 || "ANY".equalsIgnoreCase(l.getGenderPreference())
                                                 || genderPreference.equalsIgnoreCase(l.getGenderPreference()))
+
                                 .filter(l -> minRooms == null || l.getRoomsAvailable() >= minRooms)
 
-                                // ✅ 7. Build response
+                                // ✅ Response mapping
                                 .map(l -> NearbyListingResponse.builder()
                                                 .listing(l)
                                                 .ownerUsername(resolveOwnerUsername(l.getOwnerId()))
@@ -96,7 +124,7 @@ public class LocationService {
                                 .collect(Collectors.toList());
         }
 
-        /** Resolve owner display name safely */
+        // ✅ Resolve owner name
         private String resolveOwnerUsername(String ownerId) {
                 if (ownerId == null)
                         return "Unknown";
@@ -122,24 +150,20 @@ public class LocationService {
                 return user.getUserId();
         }
 
-        // Haversine distance (km)
-        private double calculateDistance(double lat1, double lon1, Double lat2, Double lon2) {
+        // ✅ Optional: backfill Redis (run once)
+        public void backfillRedis() {
+                geoListingRepository.findAll().forEach(g -> {
+                        if (g.getLatitude() != null && g.getLongitude() != null && g.getListingId() != null) {
+                                redisTemplate.opsForGeo().add(
+                                                GEO_KEY,
+                                                new Point(g.getLongitude(), g.getLatitude()),
+                                                g.getListingId());
+                        }
+                });
+        }
 
-                // Extra safety (never trust DB)
-                if (lat2 == null || lon2 == null) {
-                        return Double.MAX_VALUE;
-                }
-
-                double theta = lon1 - lon2;
-
-                double dist = Math.sin(Math.toRadians(lat1)) * Math.sin(Math.toRadians(lat2))
-                                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                                                * Math.cos(Math.toRadians(theta));
-
-                dist = Math.acos(dist);
-                dist = Math.toDegrees(dist);
-                dist = dist * 60 * 1.1515 * 1.609344;
-
-                return dist;
+        // ✅ Optional: remove from Redis
+        public void removeListing(String listingId) {
+                redisTemplate.opsForGeo().remove(GEO_KEY, listingId);
         }
 }

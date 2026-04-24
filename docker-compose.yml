@@ -20,6 +20,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - SUREPASS_TOKEN=${SUREPASS_TOKEN}
     depends_on:
       - redis
     networks:

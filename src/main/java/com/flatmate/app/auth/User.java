@@ -42,11 +42,15 @@ public class User {
     private boolean onboardingComplete; // true once role-specific data + KYC are completed
     private String roleConfirmedAt; // ISO timestamp when role was confirmed
     private boolean ownerOnboardingComplete; // true once owner creates their first listing
-    private String kycDocumentType; // AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT
+    private String kycDocumentType; // AADHAR_CARD, DRIVING_LICENSE, VOTER_ID, PASSPORT, PAN_CARD
     private String kycDocumentImageUrl;
     private String kycSelfieImageUrl;
     private boolean kycComplete;
     private String kycCompletedAt;
+
+    // SurePass verification fields
+    private String kycVerifiedName;       // Name returned from govt DB via SurePass
+    private boolean kycSurepassVerified;  // true = verified via SurePass API (not just image upload)
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("PK")

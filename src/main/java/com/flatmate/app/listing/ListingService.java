@@ -2,7 +2,10 @@ package com.flatmate.app.listing;
 
 import com.flatmate.app.auth.UserOnboardingEvaluator;
 import com.flatmate.app.auth.UserRepository;
+import com.flatmate.app.location.LocationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -35,6 +38,10 @@ public class ListingService {
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
+    @Autowired
+    @Lazy
+    private LocationService locationService;
+
     /**
      * Create a new listing (owner onboarding — Step 1 to 11).
      * Auto-calculates advanceAmount = 10x monthly rent.
@@ -59,6 +66,11 @@ public class ListingService {
         }
 
         Listing saved = listingRepository.save(listing);
+
+        // Auto-index coordinates
+        if (saved.getLatitude() != null && saved.getLongitude() != null) {
+            locationService.indexListing(saved.getId(), saved.getLatitude(), saved.getLongitude());
+        }
 
         // Mark owner onboarding as complete once their first listing is created
         if (listing.getOwnerId() != null) {
@@ -163,7 +175,14 @@ public class ListingService {
         if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
         
         existing.setUpdatedAt(LocalDateTime.now().toString());
-        return listingRepository.save(existing);
+        Listing saved = listingRepository.save(existing);
+        
+        // Auto-index coordinates if they exist
+        if (saved.getLatitude() != null && saved.getLongitude() != null) {
+            locationService.indexListing(saved.getId(), saved.getLatitude(), saved.getLongitude());
+        }
+        
+        return saved;
     }
 
     /**
@@ -179,7 +198,9 @@ public class ListingService {
     }
 
     public List<Listing> getAllListings() {
-        return listingRepository.findAll();
+        return listingRepository.findAll().stream()
+                .filter(l -> "PUBLISHED".equalsIgnoreCase(l.getStatus()))
+                .toList();
     }
 
     public Listing getListing(String id) {
@@ -190,6 +211,7 @@ public class ListingService {
     public List<Listing> getListingsByOwner(String ownerId) {
         return listingRepository.findAll().stream()
                 .filter(l -> ownerId.equals(l.getOwnerId()))
+                .filter(l -> !"DEACTIVATED".equalsIgnoreCase(l.getStatus()))
                 .toList();
     }
 

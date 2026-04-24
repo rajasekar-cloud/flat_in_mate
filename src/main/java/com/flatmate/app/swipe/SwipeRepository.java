@@ -36,6 +36,16 @@ public class SwipeRepository {
                 .count();
     }
 
+    public List<Swipe> findBySeekerId(String seekerId) {
+        return swipeTable.query(QueryConditional.sortBeginsWith(Key.builder()
+                .partitionValue("USER#" + seekerId)
+                .sortValue("SWIPE#")
+                .build()))
+                .stream()
+                .flatMap(p -> p.items().stream())
+                .collect(Collectors.toList());
+    }
+
     public List<Swipe> findByListingId(String listingId) {
         return swipeTable.index("ListingIndex")
                 .query(QueryEnhancedRequest.builder()

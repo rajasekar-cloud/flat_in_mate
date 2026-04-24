@@ -14,11 +14,11 @@ public class LocationController {
     private final LocationService locationService;
 
     // Index a listing's geo-coordinates after creation
-    @PostMapping("/index")
-    public ResponseEntity<String> indexListing(@RequestBody GeoListing geoListing) {
-        locationService.indexListing(geoListing.getListingId(), geoListing.getLatitude(), geoListing.getLongitude());
-        return ResponseEntity.ok("Listing indexed successfully");
-    }
+    // @PostMapping("/index")
+    // public ResponseEntity<String> indexListing(@RequestBody GeoListing geoListing) {
+    //     locationService.indexListing(geoListing.getListingId(), geoListing.getLatitude(), geoListing.getLongitude());
+    //     return ResponseEntity.ok("Listing indexed successfully");
+    // }
 
     // Find listings near a location — supports optional filters
     // Default flow: seeker sends current GPS → gets nearby flats
@@ -33,7 +33,13 @@ public class LocationController {
             @RequestParam(required = false) String genderPreference,
             @RequestParam(required = false) Integer minRooms) {
 
+        String currentUserId = null;
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof String) {
+             currentUserId = (String) authentication.getPrincipal();     
+        }
+
         return ResponseEntity.ok(locationService.findNearbyListings(
-                lat, lng, radius, minRent, maxRent, genderPreference, minRooms));
+                currentUserId, lat, lng, radius, minRent, maxRent, genderPreference, minRooms));
     }
 }

@@ -60,9 +60,15 @@ public final class UserOnboardingEvaluator {
     }
 
     private static boolean isKycComplete(User user) {
-        return user.isKycComplete()
-                && hasText(user.getKycDocumentType())
-                && hasText(user.getKycDocumentImageUrl())
+        if (!user.isKycComplete() || !hasText(user.getKycDocumentType())) {
+            return false;
+        }
+        // SurePass verified path — government DB confirmed, no image URLs required
+        if (user.isKycSurepassVerified()) {
+            return true;
+        }
+        // Manual upload path — both S3 image URLs must be present
+        return hasText(user.getKycDocumentImageUrl())
                 && hasText(user.getKycSelfieImageUrl());
     }
 
