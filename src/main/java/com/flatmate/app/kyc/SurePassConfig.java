@@ -8,10 +8,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class SurePassConfig {
 
-    @Value("${surepass.base-url}")
+    @Value("${surepass.base-url:https://kyc-api.surepass.io/api/v1}")
     private String baseUrl;
 
-    @Value("${surepass.token}")
+    @Value("${surepass.token:sandbox-token-replace-me}")
     private String token;
 
     @Bean
