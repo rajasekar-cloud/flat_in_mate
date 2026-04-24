@@ -36,6 +36,7 @@ jobs:
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
         RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+        SUREPASS_TOKEN: ${{ secrets.SUREPASS_TOKEN }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
