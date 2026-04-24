@@ -60,6 +60,11 @@ jobs:
           --stack-name flatmate-app-server \
           --query 'Stacks[0].Outputs[?OutputKey==`PublicIp`].OutputValue' \
           --output text)
+
+        API_GATEWAY_URL=$(aws cloudformation describe-stacks \
+          --stack-name flatmate-app-server \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+          --output text)
         
         echo "api_gateway_url=$API_GATEWAY_URL" >> $GITHUB_OUTPUT
         echo "EC2_HOST=$PUBLIC_IP" >> $GITHUB_ENV
