@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Flatmate Chat Tester</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f4f9;
+        }
+
+        #chat-box {
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        input,
+        button {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        input {
+            width: 450px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .message {
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: #e9ecef;
+            width: fit-content;
+        }
+
+        .sent {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Flatmate Chat Tester 🚀</h2>
+
+    <div class="input-group">
+        <input type="text" id="serverUrl" value="ws://65.2.137.141/ws" style="width: 300px;">
+        <button onclick="connect()">Connect</button>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="matchId" value="a0ae7d9f-825f-4f97-8e24-901f9216028f" placeholder="Match ID">
+        <input type="text" id="senderId" value="+917904055321" placeholder="Sender ID">
+    </div>
+
+    <div id="chat-box"></div>
+
+    <div class="input-group">
+        <input type="text" id="message" placeholder="Type a message..." style="width: 300px;">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        var stompClient = null;
+
+        function connect() {
+            // Using standard WebSocket instead of SockJS for better compatibility
+            var url = document.getElementById('serverUrl').value;
+            var ws = new WebSocket(url);
+            stompClient = Stomp.over(ws);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+                document.getElementById('chat-box').innerHTML += '<p><i>Connected to Chat!</i></p>';
+
+                var matchId = document.getElementById('matchId').value.trim();
+                stompClient.subscribe('/topic/match/' + matchId, function (response) {
+                    showMessage(JSON.parse(response.body));
+                });
+            }, function (error) {
+                alert('Connection Error: ' + error);
+            });
+        }
+
+        function sendMessage() {
+            var matchId = document.getElementById('matchId').value.trim();
+            var senderId = document.getElementById('senderId').value.trim();
+            var content = document.getElementById('message').value;
+
+            var msg = {
+                senderId: senderId,
+                matchId: matchId,
+                content: content,
+                type: 'TEXT'
+            };
+
+            stompClient.send("/app/chat", {}, JSON.stringify(msg));
+            document.getElementById('message').value = '';
+        }
+
+        function showMessage(message) {
+            var chatBox = document.getElementById('chat-box');
+            var msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+            if (message.senderId === document.getElementById('senderId').value) {
+                msgDiv.classList.add('sent');
+            }
+            msgDiv.textContent = message.senderId + ": " + message.content;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>

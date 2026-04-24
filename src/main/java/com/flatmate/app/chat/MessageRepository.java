@@ -27,10 +27,11 @@ public class MessageRepository {
     }
 
     public List<Message> findByMatchIdOrderByCreatedAtAsc(String matchId) {
-        return messageTable.query(QueryConditional.sortBeginsWith(Key.builder()
-                .partitionValue("MATCH#" + matchId)
-                .sortValue("MSG#")
-                .build()))
+        return messageTable.query(r -> r.queryConditional(QueryConditional.sortBeginsWith(Key.builder()
+                        .partitionValue("MATCH#" + matchId)
+                        .sortValue("MSG#")
+                        .build()))
+                        .consistentRead(true))
                 .stream()
                 .flatMap(p -> p.items().stream())
                 .collect(Collectors.toList());
