@@ -18,6 +18,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Standard WebSocket endpoint for Postman/Mobile
+        registry.addEndpoint("/ws").setAllowedOrigins("*");
+        
+        // SockJS endpoint for Web Frontend
         registry.addEndpoint("/chat-socket").setAllowedOrigins("*").withSockJS();
     }
 }
