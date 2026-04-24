@@ -61,14 +61,9 @@ jobs:
           --query 'Stacks[0].Outputs[?OutputKey==`PublicIp`].OutputValue' \
           --output text)
         
+        echo "api_gateway_url=$API_GATEWAY_URL" >> $GITHUB_OUTPUT
         echo "EC2_HOST=$PUBLIC_IP" >> $GITHUB_ENV
         echo "🚀 Server is running at: $PUBLIC_IP"
-        
-        API_GATEWAY_URL=$(aws cloudformation describe-stacks \
-          --stack-name flatmate-app-server \
-          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
-          --output text)
-          
         echo "🌐 API Gateway Endpoint: $API_GATEWAY_URL"
 
     - name: Set up JDK 17
@@ -132,7 +127,7 @@ jobs:
           sudo docker compose down --remove-orphans || true
 
           echo ">>> 2. Creating/Updating .env file..."
-          cat <<EOF > .env
+          cat <<'EOF' > .env
           AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION=${{ secrets.AWS_REGION }}
@@ -152,5 +147,30 @@ jobs:
           echo ">>> 4. Cleanup old images..."
           sudo docker system prune -f
           
-          echo ">>> DEPLOYMENT SUCCESSFUL! Validating Nginx..."
-          sudo docker ps | grep nginx
+          echo ">>> DEPLOYMENT SUCCESSFUL! Validating containers..."
+          sudo docker ps
+
+    - name: Validate Deployment (Health Check)
+      run: |
+        echo ">>> Waiting for application to start..."
+        sleep 40 # Spring Boot takes time to start
+        
+        # Use the API Gateway URL from the earlier step
+        HEALTH_URL="${{ steps.deploy-infra.outputs.api_gateway_url }}/health"
+        echo ">>> Checking Health at: $HEALTH_URL"
+        
+        # Retry logic: Try 6 times with 10s intervals
+        for i in {1..6}; do
+          echo "Attempt $i..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
+          if [ "$RESPONSE" == "200" ]; then
+            echo "✅ SUCCESS: Application is healthy!"
+            exit 0
+          fi
+          echo "Wait: Received HTTP $RESPONSE, retrying in 10s..."
+          sleep 10
+        done
+        
+        echo "::error::❌ FAILURE: The application failed to start or is returning 502/404."
+        echo "Please check 'sudo docker logs flatmate-backend' on the EC2 server."
+        exit 1
