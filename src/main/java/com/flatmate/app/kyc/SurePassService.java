@@ -11,14 +11,16 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SurePassService {
 
+    private static final Logger log = LoggerFactory.getLogger(SurePassService.class);
     private final WebClient surePassWebClient;
     private final UserRepository userRepository;
 

@@ -3,7 +3,6 @@ package com.flatmate.app.chat;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
-@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,6 +14,17 @@ public class Message {
     private String content;
     private String type;
     private String createdAt;
+
+    public String getMatchId() { return matchId; }
+    public void setMatchId(String matchId) { this.matchId = matchId; }
+    public String getSenderId() { return senderId; }
+    public void setSenderId(String senderId) { this.senderId = senderId; }
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("PK")

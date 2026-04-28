@@ -4,6 +4,7 @@
 *-key.pem
 *-ascii.pem
 application-local.yml
+firebase-service-account.json
 
 # Maven build output
 target/

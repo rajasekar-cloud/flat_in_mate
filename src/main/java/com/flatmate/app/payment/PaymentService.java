@@ -13,13 +13,12 @@ public class PaymentService {
 
     public String createSubscriptionOrder(String userId, String planId) {
         String mockRazorpayId = "sub_" + System.currentTimeMillis();
-        Subscription subscription = Subscription.builder()
-                .userId(userId)
-                .planId(planId)
-                .razorpayOrderId(mockRazorpayId)
-                .status("ACTIVE")
-                .expiresAt(LocalDateTime.now().plusMonths(1).toString())
-                .build();
+        Subscription subscription = new Subscription();
+        subscription.setUserId(userId);
+        subscription.setPlanId(planId);
+        subscription.setRazorpayOrderId(mockRazorpayId);
+        subscription.setStatus("ACTIVE");
+        subscription.setExpiresAt(LocalDateTime.now().plusMonths(1).toString());
         subscriptionRepository.save(subscription);
 
         // Update User Premium Status

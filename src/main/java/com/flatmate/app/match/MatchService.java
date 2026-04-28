@@ -15,14 +15,14 @@ public class MatchService {
     private final com.flatmate.app.event.EventPublisher eventPublisher;
 
     public Match createMatchRequest(String seekerId, String ownerId, String listingId) {
-        Match match = Match.builder()
-                .matchId(UUID.randomUUID().toString())
-                .seekerId(seekerId)
-                .ownerId(ownerId)
-                .listingId(listingId)
-                .status("PENDING")
-                .createdAt(LocalDateTime.now().toString())
-                .build();
+        Match match = new Match();
+        match.setMatchId(UUID.randomUUID().toString());
+        match.setSeekerId(seekerId);
+        match.setOwnerId(ownerId);
+        match.setListingId(listingId);
+        match.setStatus("PENDING");
+        match.setCreatedAt(LocalDateTime.now().toString());
+        match.setUpdatedAt(LocalDateTime.now().toString());
         return matchRepository.save(match);
     }
 

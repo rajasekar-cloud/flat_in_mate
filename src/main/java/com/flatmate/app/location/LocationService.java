@@ -15,12 +15,16 @@ import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class LocationService {
+
+        private static final Logger log = LoggerFactory.getLogger(LocationService.class);
 
         private final GeoListingRepository geoListingRepository;
         private final ListingService listingService;
@@ -38,11 +42,10 @@ public class LocationService {
                 }
 
                 // Save in DB
-                GeoListing geo = GeoListing.builder()
-                                .listingId(listingId)
-                                .latitude(lat)
-                                .longitude(lng)
-                                .build();
+                GeoListing geo = new GeoListing();
+                geo.setListingId(listingId);
+                geo.setLatitude(lat);
+                geo.setLongitude(lng);
 
                 geoListingRepository.save(geo);
 
@@ -90,7 +93,7 @@ public class LocationService {
                                         try {
                                                 return listingService.getListing(id);
                                         } catch (Exception e) {
-                                                System.out.println("❌ Failed to fetch listing: " + id);
+                                                log.error("❌ Failed to fetch listing: {}", id);
                                                 return null;
                                         }
                                 })
@@ -116,10 +119,12 @@ public class LocationService {
                                 .filter(l -> minRooms == null || l.getRoomsAvailable() >= minRooms)
 
                                 // ✅ Response mapping
-                                .map(l -> NearbyListingResponse.builder()
-                                                .listing(l)
-                                                .ownerUsername(resolveOwnerUsername(l.getOwnerId()))
-                                                .build())
+                                .map(l -> {
+                                        NearbyListingResponse resp = new NearbyListingResponse();
+                                        resp.setListing(l);
+                                        resp.setOwnerUsername(resolveOwnerUsername(l.getOwnerId()));
+                                        return resp;
+                                })
 
                                 .collect(Collectors.toList());
         }

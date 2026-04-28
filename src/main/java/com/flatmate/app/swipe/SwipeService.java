@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,16 +24,20 @@ public class SwipeService {
         com.flatmate.app.auth.User user = userRepository.findById(seekerId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Prevent duplicate swipes — the seeker already acted on this listing
+        if (swipeRepository.findBySeekIdAndListingId(seekerId, listingId).isPresent()) {
+            throw new RuntimeException("You have already swiped on this listing.");
+        }
+
         if (!user.isPremium()) {
             checkLimits(seekerId);
         }
 
-        Swipe swipe = Swipe.builder()
-                .seekerId(seekerId)
-                .listingId(listingId)
-                .type(type)
-                .createdAt(LocalDate.now().toString())
-                .build();
+        Swipe swipe = new Swipe();
+        swipe.setSeekerId(seekerId);
+        swipe.setListingId(listingId);
+        swipe.setType(type);
+        swipe.setCreatedAt(LocalDate.now().toString());
 
         swipeRepository.save(swipe);
 
@@ -44,6 +49,11 @@ public class SwipeService {
         String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
         String dailyKey = "view:daily:" + seekerId + ":" + date;
         redisTemplate.opsForValue().increment(dailyKey);
+    }
+
+    /** Returns the set of listing IDs this seeker has already swiped on (LEFT or RIGHT). */
+    public Set<String> getSwipedListingIds(String seekerId) {
+        return swipeRepository.findSwipedListingIds(seekerId);
     }
 
     private void checkLimits(String seekerId) {
@@ -70,15 +80,15 @@ public class SwipeService {
                     
                     if (user == null) return null;
 
-                    return InterestedSeekerDTO.builder()
-                            .seekerId(user.getUserId())
-                            .firstName(user.getFirstName())
-                            .lastName(user.getLastName())
-                            .profilePic(user.getProfilePic())
-                            .gender(user.getGender())
-                            .description(user.getBio()) // or user.getSeekerProfile().getDescription()
-                            .swipedAt(s.getCreatedAt())
-                            .build();
+                    InterestedSeekerDTO dto = new InterestedSeekerDTO();
+                    dto.setSeekerId(user.getUserId());
+                    dto.setFirstName(user.getFirstName());
+                    dto.setLastName(user.getLastName());
+                    dto.setProfilePic(user.getProfilePic());
+                    dto.setGender(user.getGender());
+                    dto.setDescription(user.getBio());
+                    dto.setSwipedAt(s.getCreatedAt());
+                    return dto;
                 })
                 .filter(dto -> dto != null)
                 .collect(Collectors.toList());

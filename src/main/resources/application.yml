@@ -12,8 +12,8 @@ server:
 # DynamoDB / AWS Configuration
 aws:
   region: ${AWS_REGION:ap-south-1}
-  access-key: ${AWS_ACCESS_KEY_ID:local-dev-placeholder}
-  secret-key: ${AWS_SECRET_ACCESS_KEY:local-dev-placeholder}
+  access-key: ${AWS_ACCESS_KEY_ID:}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:}
   dynamodb:
     table-name: ${DYNAMODB_TABLE_NAME:FlatmateData}
   s3:
@@ -33,3 +33,12 @@ jwt:
 logging:
   level:
     com.flatmate.app: DEBUG
+
+# SurePass KYC
+surepass:
+  token: ${SUREPASS_TOKEN:}
+
+# Firebase Admin SDK — set FIREBASE_SERVICE_ACCOUNT_PATH to enable real push notifications.
+# Alternatively, place firebase-service-account.json in src/main/resources/ (DO NOT commit to git).
+firebase:
+  service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}

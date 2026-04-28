@@ -44,14 +44,13 @@ public class SwipeEventListener {
             notificationService.sendNotification(ownerId, title, body);
 
             // 3. Persist Notification for In-App Inbox
-            Notification notif = Notification.builder()
-                    .id(UUID.randomUUID().toString())
-                    .userId(ownerId)
-                    .title(title)
-                    .message(body)
-                    .timestamp(LocalDateTime.now().toString())
-                    .read(false)
-                    .build();
+            Notification notif = new Notification();
+            notif.setId(UUID.randomUUID().toString());
+            notif.setUserId(ownerId);
+            notif.setTitle(title);
+            notif.setMessage(body);
+            notif.setTimestamp(LocalDateTime.now().toString());
+            notif.setRead(false);
             notificationRepository.save(notif);
         }
     }

@@ -64,12 +64,11 @@ public class AuthService {
         if (!currentRoles.isEmpty() && !roleAlreadyPresent) {
             String fromRole = currentRoles.contains("OWNER") ? "OWNER" : "SEEKER";
             if (!fromRole.equals(newRole)) {
-                RoleChangeHistory history = RoleChangeHistory.builder()
-                        .userId(userId)
-                        .fromRole(fromRole)
-                        .toRole(newRole)
-                        .changedAt(LocalDateTime.now().toString())
-                        .build();
+                RoleChangeHistory history = new RoleChangeHistory();
+                history.setUserId(userId);
+                history.setFromRole(fromRole);
+                history.setToRole(newRole);
+                history.setChangedAt(LocalDateTime.now().toString());
                 roleChangeHistoryRepository.save(history);
             }
         }
@@ -111,36 +110,39 @@ public class AuthService {
     }
 
     private User createPhoneUser(String phone) {
-        User newUser = User.builder()
-                .userId(phone)
-                .phone(phone)
-                .roles(null)
-                .activeRole(null)
-                .isPremium(false)
-                .roleSelectionComplete(false)
-                .onboardingComplete(false)
-                .ownerOnboardingComplete(false)
-                .kycComplete(false)
-                .build();
+        User newUser = new User();
+        newUser.setUserId(phone);
+        newUser.setPhone(phone);
+        newUser.setRoles(null);
+        newUser.setActiveRole(null);
+        newUser.setPremium(false);
+        newUser.setRoleSelectionComplete(false);
+        newUser.setOnboardingComplete(false);
+        newUser.setOwnerOnboardingComplete(false);
+        newUser.setKycComplete(false);
         userRepository.save(newUser);
         return newUser;
     }
 
     private AuthResponse buildAuthResponse(User user) {
         String activeRole = UserOnboardingEvaluator.resolveActiveRole(user);
-        boolean onboardingComplete = UserOnboardingEvaluator.isOnboardingCompleteForRole(user, activeRole);
+        // Read the persisted value — setUserRole / updateOnboardingStatus already computes
+        // and saves this correctly. Re-evaluating here ignores whatever was stored and causes
+        // onboardingComplete to return false even after the user has finished onboarding.
+        boolean onboardingComplete = user.isOnboardingComplete();
         String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRoles());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .userId(user.getUserId())
-                .roles(user.getRoles())
-                .activeRole(activeRole)
-                .isNewUser(!onboardingComplete)
-                .onboardingComplete(onboardingComplete)
-                .accessTokenExpiresIn(24 * 3600L)
-                .build();
+        
+        AuthResponse response = new AuthResponse();
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setUserId(user.getUserId());
+        response.setRoles(user.getRoles());
+        response.setActiveRole(activeRole);
+        response.setNewUser(!onboardingComplete);
+        response.setOnboardingComplete(onboardingComplete);
+        response.setAccessTokenExpiresIn(24 * 3600L);
+        return response;
     }
 
     private String normalizeRole(String role) {

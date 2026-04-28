@@ -10,6 +10,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -24,6 +26,27 @@ public class SwipeRepository {
 
     public void save(Swipe swipe) {
         swipeTable.putItem(swipe);
+    }
+
+    /** Returns the existing swipe for a seeker-listing pair, if any. */
+    public Optional<Swipe> findBySeekIdAndListingId(String seekerId, String listingId) {
+        Key key = Key.builder()
+                .partitionValue("USER#" + seekerId)
+                .sortValue("SWIPE#" + listingId)
+                .build();
+        return Optional.ofNullable(swipeTable.getItem(key));
+    }
+
+    /** Returns the set of listingIds this seeker has already swiped on (any direction). */
+    public Set<String> findSwipedListingIds(String seekerId) {
+        return swipeTable.query(QueryConditional.sortBeginsWith(Key.builder()
+                .partitionValue("USER#" + seekerId)
+                .sortValue("SWIPE#")
+                .build()))
+                .stream()
+                .flatMap(p -> p.items().stream())
+                .map(Swipe::getListingId)
+                .collect(Collectors.toSet());
     }
 
     public long countBySeekerId(String seekerId) {
