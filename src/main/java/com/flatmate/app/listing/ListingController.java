@@ -74,4 +74,23 @@ public class ListingController {
         String url = listingService.generateUploadUrl("listings/" + id + "/" + fileName);
         return ResponseEntity.ok(Map.of("url", url, "filePath", "listings/" + id + "/" + fileName));
     }
+
+    // ── Get multiple S3 pre-signed URLs in a single call ─────────────────────
+    @PostMapping("/{id}/bulk-upload-urls")
+    public ResponseEntity<List<Map<String, String>>> getBulkUploadUrls(
+            @PathVariable String id,
+            @RequestBody List<String> fileNames) {
+        List<Map<String, String>> response = fileNames.stream()
+                .map(fileName -> {
+                    String filePath = "listings/" + id + "/" + fileName;
+                    String url = listingService.generateUploadUrl(filePath);
+                    return Map.of(
+                            "fileName", fileName,
+                            "url", url,
+                            "filePath", filePath
+                    );
+                })
+                .toList();
+        return ResponseEntity.ok(response);
+    }
 }

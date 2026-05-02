@@ -1,0 +1,120 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+    "name": "FlatMate App API - v16 (TOTAL AUDIT)",
+    "description": "Exhaustive Postman collection covering every single endpoint identified in the codebase.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "+916379091283", "type": "string" },
+    { "key": "listingId", "value": "listing_001", "type": "string" },
+    { "key": "matchId", "value": "match_001", "type": "string" },
+    { "key": "seekerId", "value": "+910000000000", "type": "string" },
+    { "key": "ownerId", "value": "+916379091283", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "1. Health",
+      "item": [
+        { "name": "Get Health Status", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/health" } } }
+      ]
+    },
+    {
+      "name": "2. Auth",
+      "item": [
+        { "name": "Send OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/send" } } },
+        { "name": "Verify OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\", \"otp\": \"123456\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/verify" } } },
+        { "name": "Refresh Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"refreshToken\": \"{{refreshToken}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/refresh" } } },
+        { "name": "Set Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"SEEKER\"}" }, "url": { "raw": "{{baseUrl}}/auth/set-role" } } },
+        { "name": "Switch Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/auth/switch-role" } } }
+      ]
+    },
+    {
+      "name": "3. User Profile",
+      "item": [
+        { "name": "Get Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}" } } },
+        { "name": "Update Profile", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"firstName\": \"Raj\"}" }, "url": { "raw": "{{baseUrl}}/profiles" } } },
+        { "name": "Register As Owner", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/owner" } } },
+        { "name": "Get Role History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/role-history" } } },
+        { "name": "Submit Manual KYC Images", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"documentType\":\"AADHAR_CARD\", \"documentImageUrl\":\"url1\", \"selfieImageUrl\":\"url2\"}" }, "url": { "raw": "{{baseUrl}}/profiles/kyc" } } },
+        { "name": "Delete KYC Asset", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc?type=document" } } },
+        { "name": "Get KYC Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=aadhar.jpg&type=document" } } },
+        { "name": "Get KYC View URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/view-url?type=SELFIE" } } }
+      ]
+    },
+    {
+      "name": "4. KYC (Automated)",
+      "item": [
+        { "name": "Aadhaar: Verify Offline (ZIP)", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [ { "key": "userId", "value": "{{userId}}", "type": "text" }, { "key": "file", "type": "file" }, { "key": "shareCode", "value": "1234", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/profiles/kyc/aadhaar/verify-offline" } } },
+        { "name": "DigiLocker: Get Auth URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/auth-url?userId={{userId}}" } } },
+        { "name": "DigiLocker: Verify Code", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/verify?userId={{userId}}&code=AUTH_CODE" } } }
+      ]
+    },
+    {
+      "name": "5. Listings",
+      "item": [
+        { "name": "Save as Draft", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Draft Flat\"}" }, "url": { "raw": "{{baseUrl}}/listings/draft" } } },
+        { "name": "Publish (Validate 5 Photos)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Live Flat\", \"photos\":[\"p1\",\"p2\",\"p3\",\"p4\",\"p5\"]}" }, "url": { "raw": "{{baseUrl}}/listings" } } },
+        { "name": "Update Listing", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"propertyName\":\"Updated Name\"}" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
+        { "name": "Deactivate Listing", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
+        { "name": "Get All Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings" } } },
+        { "name": "Get Listing by ID", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
+        { "name": "Get Owner Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/{{userId}}" } } },
+        { "name": "Get Single Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=room.jpg" } } },
+        { "name": "Get Bulk Upload URLs", "request": { "method": "POST", "body": { "mode": "raw", "raw": "[\"p1.jpg\",\"p2.jpg\"]" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/bulk-upload-urls" } } }
+      ]
+    },
+    {
+      "name": "6. Location",
+      "item": [
+        { "name": "Search Nearby (with Filters)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/location/nearby?lat=11.01&lng=76.95&radius=10&minRent=5000" } } }
+      ]
+    },
+    {
+      "name": "7. Swipes",
+      "item": [
+        { "name": "Record Swipe", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{userId}}\", \"listingId\":\"{{listingId}}\", \"type\":\"RIGHT\"}" }, "url": { "raw": "{{baseUrl}}/swipes" } } },
+        { "name": "Get My Swipe IDs (History)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/my-swipes?seekerId={{userId}}" } } },
+        { "name": "Get Interested Seekers (Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/listing/{{listingId}}/interests" } } }
+      ]
+    },
+    {
+      "name": "8. Matches",
+      "item": [
+        { "name": "Approve Match", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/approve" } } },
+        { "name": "Force Create Match (Debug)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/create" } } },
+        { "name": "Get My Active Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/{{userId}}" } } }
+      ]
+    },
+    {
+      "name": "9. Chat",
+      "item": [
+        { "name": "Get History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/{{matchId}}/history" } } },
+        { "name": "Mark as Read", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"s1\", \"ownerId\":\"o1\", \"role\":\"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/chat/read" } } },
+        { "name": "Get Chat Media Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/upload-url?fileName=img.jpg" } } }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "item": [
+        { "name": "Save Device Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"token\":\"FCM_TOKEN\"}" }, "url": { "raw": "{{baseUrl}}/notifications/token" } } },
+        { "name": "Send Direct Push (Test)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"title\":\"Hello\", \"body\":\"World\"}" }, "url": { "raw": "{{baseUrl}}/notifications/send" } } },
+        { "name": "Get Inbox", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/notifications/inbox/{{userId}}" } } }
+      ]
+    },
+    {
+      "name": "11. Payments",
+      "item": [
+        { "name": "Create Subscription", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"planId\":\"premium\"}" }, "url": { "raw": "{{baseUrl}}/payments/subscribe" } } },
+        { "name": "Webhook (Simulate Callback)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{}" }, "url": { "raw": "{{baseUrl}}/payments/webhook" } } }
+      ]
+    }
+  ]
+}
