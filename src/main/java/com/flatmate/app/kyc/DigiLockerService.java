@@ -20,16 +20,16 @@ public class DigiLockerService {
     private final WebClient digiLockerWebClient;
     private final UserRepository userRepository;
 
-    @Value("${digilocker.client-id}")
+    @Value("${digilocker.client-id:placeholder-id}")
     private String clientId;
 
-    @Value("${digilocker.client-secret}")
+    @Value("${digilocker.client-secret:placeholder-secret}")
     private String clientSecret;
 
-    @Value("${digilocker.redirect-uri}")
+    @Value("${digilocker.redirect-uri:http://localhost:8081/profiles/kyc/digilocker/callback}")
     private String redirectUri;
 
-    @Value("${digilocker.base-url}")
+    @Value("${digilocker.base-url:https://api.digitallocker.gov.in/public/oauth2/1}")
     private String baseUrl;
 
     /**

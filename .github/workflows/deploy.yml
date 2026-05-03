@@ -15,7 +15,7 @@ jobs:
     - name: Pre-flight Check (Verify Secrets)
       run: |
         echo ">>> Starting Secret Verification..."
-        REQUIRED_VARS=("AWS_SSH_KEY_NAME" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET" "SUREPASS_TOKEN")
+        REQUIRED_VARS=("AWS_SSH_KEY_NAME" "SSH_PRIVATE_KEY" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "JWT_SECRET" "DYNAMODB_TABLE_NAME" "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "RAZORPAY_KEY_ID" "RAZORPAY_KEY_SECRET")
         for var_name in "${REQUIRED_VARS[@]}"; do
           echo "Checking $var_name..."
           if [ -z "${!var_name}" ]; then
@@ -142,6 +142,10 @@ jobs:
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+          DIGILOCKER_CLIENT_ID=${{ secrets.DIGILOCKER_CLIENT_ID }}
+          DIGILOCKER_CLIENT_SECRET=${{ secrets.DIGILOCKER_CLIENT_SECRET }}
+          DIGILOCKER_REDIRECT_URI=${{ secrets.DIGILOCKER_REDIRECT_URI }}
+          DIGILOCKER_BASE_URL=${{ secrets.DIGILOCKER_BASE_URL }}
           SUREPASS_TOKEN=${{ secrets.SUREPASS_TOKEN }}
           EOF
 

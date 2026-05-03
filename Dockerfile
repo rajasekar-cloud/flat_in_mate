@@ -7,5 +7,6 @@ COPY target/*.jar app.jar
 
 EXPOSE 8081
 
-# Run the application with optimized memory settings
-ENTRYPOINT ["java", "-Xmx512m", "-jar", "app.jar"]
+# Run the application with optimized memory settings for t3.micro (1GB RAM)
+# Reduced heap to 384m to leave room for OS, Redis, and Nginx
+ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar"]

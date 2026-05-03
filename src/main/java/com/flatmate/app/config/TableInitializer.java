@@ -16,12 +16,17 @@ public class TableInitializer {
 
     private final DynamoDbEnhancedClient enhancedClient;
 
-    @Value("${aws.dynamodb.table-name}")
+    @Value("${aws.dynamodb.table-name:FlatmateData}")
     private String tableName;
 
     @PostConstruct
     public void init() {
-        createTable(User.class);
+        try {
+            createTable(User.class);
+        } catch (Exception e) {
+            System.err.println("CRITICAL: Failed to initialize DynamoDB tables. The app may fail to function correctly. Error: " + e.getMessage());
+            // We don't rethrow to allow the app to at least start so logs can be fetched
+        }
     }
 
     private <T> void createTable(Class<T> type) {

@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class DigiLockerConfig {
 
-    @Value("${digilocker.base-url}")
+    @Value("${digilocker.base-url:https://api.digitallocker.gov.in/public/oauth2/1}")
     private String baseUrl;
 
     @Bean
