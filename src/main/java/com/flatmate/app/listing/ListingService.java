@@ -215,6 +215,12 @@ public class ListingService {
                 .toList();
     }
 
+    public List<Listing> searchListingsByOwner(String ownerId, String query) {
+        return getListingsByOwner(ownerId).stream()
+                .filter(l -> matchesListing(l, query))
+                .toList();
+    }
+
     /**
      * Generate a pre-signed S3 URL for direct client-side file upload.
      * Supports: JPEG, PNG, HEIC (iOS), MP4, MOV (video tours), GIF, WebP.
@@ -369,5 +375,30 @@ public class ListingService {
         if (lower.endsWith(".mov"))  return "video/quicktime";
         if (lower.endsWith(".avi"))  return "video/x-msvideo";
         return "image/jpeg";
+    }
+
+    private boolean matchesListing(Listing listing, String query) {
+        if (query == null || query.isBlank()) {
+            return true;
+        }
+
+        String q = query.toLowerCase();
+        return contains(listing.getPropertyName(), q)
+                || contains(listing.getPlaceType(), q)
+                || contains(listing.getRoomType(), q)
+                || contains(listing.getCity(), q)
+                || contains(listing.getDistrict(), q)
+                || contains(listing.getStreetAddress(), q)
+                || contains(listing.getLandmark(), q)
+                || contains(listing.getPinCode(), q)
+                || contains(listing.getDescription(), q);
+    }
+
+    public boolean matchesSearch(Listing listing, String query) {
+        return matchesListing(listing, query);
+    }
+
+    private boolean contains(String value, String query) {
+        return value != null && value.toLowerCase().contains(query);
     }
 }

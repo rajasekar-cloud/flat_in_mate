@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
     "name": "FlatMate App API - v16 (TOTAL AUDIT)",
-    "description": "Exhaustive Postman collection covering every single endpoint identified in the codebase.",
+    "description": "Exhaustive Postman collection covering every single endpoint identified in the codebase, including listing/chat/liked-property/match search APIs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -67,6 +67,9 @@
         { "name": "Get All Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings" } } },
         { "name": "Get Listing by ID", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
         { "name": "Get Owner Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/{{userId}}" } } },
+        { "name": "Get My Listings (JWT Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/mine" } } },
+        { "name": "Get My Listings Alias (JWT Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/me" } } },
+        { "name": "Search My Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/mine/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
         { "name": "Get Single Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=room.jpg" } } },
         { "name": "Get Bulk Upload URLs", "request": { "method": "POST", "body": { "mode": "raw", "raw": "[\"p1.jpg\",\"p2.jpg\"]" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/bulk-upload-urls" } } }
       ]
@@ -82,6 +85,7 @@
       "item": [
         { "name": "Record Swipe", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{userId}}\", \"listingId\":\"{{listingId}}\", \"type\":\"RIGHT\"}" }, "url": { "raw": "{{baseUrl}}/swipes" } } },
         { "name": "Get My Swipe IDs (History)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/my-swipes?seekerId={{userId}}" } } },
+        { "name": "Search Liked Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/liked/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
         { "name": "Get Interested Seekers (Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/listing/{{listingId}}/interests" } } }
       ]
     },
@@ -90,6 +94,7 @@
       "item": [
         { "name": "Approve Match", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/approve" } } },
         { "name": "Force Create Match (Debug)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/create" } } },
+        { "name": "Search Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
         { "name": "Get My Active Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/{{userId}}" } } }
       ]
     },
@@ -98,6 +103,7 @@
       "item": [
         { "name": "Get History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/{{matchId}}/history" } } },
         { "name": "Mark as Read", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"s1\", \"ownerId\":\"o1\", \"role\":\"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/chat/read" } } },
+        { "name": "Search Chat Contacts", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/search?query=Raj", "query": [ { "key": "query", "value": "Raj" } ] } } },
         { "name": "Get Chat Media Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/upload-url?fileName=img.jpg" } } }
       ]
     },

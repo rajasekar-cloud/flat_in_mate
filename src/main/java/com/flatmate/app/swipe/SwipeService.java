@@ -18,6 +18,7 @@ public class SwipeService {
     private final SwipeRepository swipeRepository;
     private final StringRedisTemplate redisTemplate;
     private final com.flatmate.app.auth.UserRepository userRepository;
+    private final com.flatmate.app.listing.ListingService listingService;
     private final EventPublisher eventPublisher;
 
     public void recordSwipe(String seekerId, String listingId, String type) {
@@ -54,6 +55,28 @@ public class SwipeService {
     /** Returns the set of listing IDs this seeker has already swiped on (LEFT or RIGHT). */
     public Set<String> getSwipedListingIds(String seekerId) {
         return swipeRepository.findSwipedListingIds(seekerId);
+    }
+
+    public List<LikedListingSearchResult> searchLikedListings(String seekerId, String query) {
+        return swipeRepository.findBySeekerId(seekerId).stream()
+                .filter(s -> "RIGHT".equalsIgnoreCase(s.getType()))
+                .map(s -> {
+                    try {
+                        com.flatmate.app.listing.Listing listing = listingService.getListing(s.getListingId());
+                        if (!listingService.matchesSearch(listing, query)) {
+                            return null;
+                        }
+
+                        LikedListingSearchResult result = new LikedListingSearchResult();
+                        result.setListing(listing);
+                        result.setLikedAt(s.getCreatedAt());
+                        return result;
+                    } catch (RuntimeException e) {
+                        return null;
+                    }
+                })
+                .filter(result -> result != null)
+                .collect(Collectors.toList());
     }
 
     private void checkLimits(String seekerId) {

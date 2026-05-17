@@ -3,6 +3,8 @@ package com.flatmate.app.swipe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,8 +43,22 @@ public class SwipeController {
         return ResponseEntity.ok(swipeService.getSwipedListingIds(seekerId));
     }
 
+    @GetMapping("/liked/search")
+    public ResponseEntity<List<LikedListingSearchResult>> searchLikedListings(
+            @RequestParam(defaultValue = "") String query) {
+        return ResponseEntity.ok(swipeService.searchLikedListings(currentUserId(), query));
+    }
+
     @GetMapping("/listing/{listingId}/interests")
     public ResponseEntity<List<InterestedSeekerDTO>> getInterests(@PathVariable String listingId) {
         return ResponseEntity.ok(swipeService.getInterestedSeekers(listingId));
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof String userId) || userId.isBlank()) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        return userId;
     }
 }

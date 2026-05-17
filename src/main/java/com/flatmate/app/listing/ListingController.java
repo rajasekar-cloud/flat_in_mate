@@ -1,7 +1,10 @@
 package com.flatmate.app.listing;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,6 +57,17 @@ public class ListingController {
     }
 
     // ── Get listing by ID ────────────────────────────────────────────────────
+    // Get listings owned by the currently authenticated owner
+    @GetMapping({"/mine", "/owner/me"})
+    public ResponseEntity<List<Listing>> getMyListings() {
+        return ResponseEntity.ok(listingService.getListingsByOwner(currentUserId()));
+    }
+
+    @GetMapping("/mine/search")
+    public ResponseEntity<List<Listing>> searchMyListings(@RequestParam(defaultValue = "") String query) {
+        return ResponseEntity.ok(listingService.searchListingsByOwner(currentUserId(), query));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Listing> get(@PathVariable String id) {
         return ResponseEntity.ok(listingService.getListing(id));
@@ -62,6 +76,9 @@ public class ListingController {
     // ── Get all listings by owner ────────────────────────────────────────────
     @GetMapping("/owner/{ownerId}")
     public ResponseEntity<List<Listing>> getByOwner(@PathVariable String ownerId) {
+        if (!currentUserId().equals(ownerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(listingService.getListingsByOwner(ownerId));
     }
 
@@ -92,5 +109,13 @@ public class ListingController {
                 })
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof String userId) || userId.isBlank()) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        return userId;
     }
 }

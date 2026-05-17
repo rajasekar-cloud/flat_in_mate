@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -44,9 +46,24 @@ public class ChatController {
         return ResponseEntity.ok(listingService.generateUploadUrl("chat/" + fileName));
     }
 
+    @GetMapping("/chat/search")
+    @ResponseBody
+    public ResponseEntity<List<ChatContactSearchResult>> searchChatContacts(
+            @RequestParam(defaultValue = "") String query) {
+        return ResponseEntity.ok(chatService.searchChatContacts(currentUserId(), query));
+    }
+
     @GetMapping("/chat/{matchId}/history")
     @ResponseBody
     public ResponseEntity<List<Message>> getHistory(@PathVariable String matchId) {
         return ResponseEntity.ok(chatService.getChatHistory(matchId));
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof String userId) || userId.isBlank()) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        return userId;
     }
 }

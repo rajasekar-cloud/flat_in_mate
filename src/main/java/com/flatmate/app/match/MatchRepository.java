@@ -4,9 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,29 +26,33 @@ public class MatchRepository {
     }
 
     public Optional<Match> findById(String id, String seekerId) {
-        // In this design, PK=USER#seekerId, SK=MATCH#ownerId.
-        // We'd need a secondary index to find by matchId alone, or store matchId in SK.
-        // For simplicity, we query by seekerId.
-        return findBySeekerId(seekerId).stream()
+        return findByUserId(seekerId).stream()
                 .filter(m -> m.getMatchId().equals(id))
                 .findFirst();
     }
 
     public List<Match> findBySeekerId(String seekerId) {
-        return matchTable.query(QueryConditional.sortBeginsWith(Key.builder()
-                .partitionValue("USER#" + seekerId)
-                .sortValue("MATCH#")
-                .build()))
-                .stream()
-                .flatMap(p -> p.items().stream())
+        return findAll().stream()
+                .filter(m -> seekerId.equals(m.getSeekerId()))
+                .collect(Collectors.toList());
+    }
+
+    public List<Match> findByUserId(String userId) {
+        return findAll().stream()
+                .filter(m -> userId.equals(m.getSeekerId()) || userId.equals(m.getOwnerId()))
                 .collect(Collectors.toList());
     }
 
     public Optional<Match> findBySeekerIdAndOwnerId(String seekerId, String ownerId) {
-        Match match = matchTable.getItem(Key.builder()
-                .partitionValue("USER#" + seekerId)
-                .sortValue("MATCH#" + ownerId)
-                .build());
-        return Optional.ofNullable(match);
+        return findAll().stream()
+                .filter(m -> seekerId.equals(m.getSeekerId()))
+                .filter(m -> ownerId.equals(m.getOwnerId()))
+                .findFirst();
+    }
+
+    private List<Match> findAll() {
+        return matchTable.scan().items().stream()
+                .filter(m -> m.getMatchId() != null)
+                .collect(Collectors.toList());
     }
 }
