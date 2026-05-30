@@ -88,4 +88,56 @@ public class MatchService {
 
         return resp;
     }
+
+    public List<MatchSearchResult> searchMatches(String currentUserId, String query) {
+        return matchRepository.findByUserId(currentUserId).stream()
+                .map(match -> {
+                    String otherUserId = match.getSeekerId().equals(currentUserId) 
+                            ? match.getOwnerId() 
+                            : match.getSeekerId();
+                    var otherUser = userRepository.findById(otherUserId).orElse(null);
+                    
+                    Listing listing = null;
+                    if (match.getListingId() != null) {
+                        try {
+                            listing = listingService.getListing(match.getListingId());
+                        } catch (Exception e) {
+                            // Listing not found or deleted
+                        }
+                    }
+
+                    String otherUserName = "Unknown User";
+                    String otherUserProfilePic = null;
+                    if (otherUser != null) {
+                        String fullName = (otherUser.getFirstName() != null ? otherUser.getFirstName() : "") + " " + 
+                                          (otherUser.getLastName() != null ? otherUser.getLastName() : "");
+                        otherUserName = fullName.trim().isEmpty() ? "Flatmate User" : fullName.trim();
+                        otherUserProfilePic = otherUser.getProfilePic();
+                    }
+
+                    // Apply the search query filter
+                    if (query != null && !query.isBlank()) {
+                        String q = query.toLowerCase();
+                        boolean matchesName = otherUserName.toLowerCase().contains(q);
+                        boolean matchesListing = false;
+                        if (listing != null) {
+                            matchesListing = listingService.matchesSearch(listing, query);
+                        }
+                        if (!matchesName && !matchesListing) {
+                            return null; // Exclude from search results
+                        }
+                    }
+
+                    MatchSearchResult result = new MatchSearchResult();
+                    result.setMatch(match);
+                    result.setOtherUserId(otherUserId);
+                    result.setOtherUserName(otherUserName);
+                    result.setOtherUserProfilePic(otherUserProfilePic);
+                    result.setListing(listing);
+                    return result;
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
 }
+
