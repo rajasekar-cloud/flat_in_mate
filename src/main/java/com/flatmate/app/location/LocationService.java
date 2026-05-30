@@ -30,6 +30,7 @@ public class LocationService {
         private final ListingService listingService;
         private final UserRepository userRepository;
         private final SwipeRepository swipeRepository;
+        private final com.flatmate.app.moderation.ModerationRepository moderationRepository;
         private final StringRedisTemplate redisTemplate;
 
         private static final String GEO_KEY = "geo:listings";
@@ -71,6 +72,11 @@ public class LocationService {
                                                 .collect(Collectors.toSet())
                                 : new HashSet<>();
 
+                // ✅ Get blocked users
+                final List<String> blockedUserIds = (currentUserId != null && !currentUserId.isEmpty())
+                                ? moderationRepository.getBlockedUserIds(currentUserId)
+                                : new ArrayList<>();
+
                 // ✅ Redis GEO search
                 Circle circle = new Circle(
                                 new Point(lng, lat),
@@ -106,6 +112,8 @@ public class LocationService {
 
                                 .filter(l -> currentUserId == null || currentUserId.isEmpty()
                                                 || !currentUserId.equals(l.getOwnerId()))
+
+                                .filter(l -> !blockedUserIds.contains(l.getOwnerId())) // ✅ Hide blocked users
 
                                 .filter(l -> "PUBLISHED".equalsIgnoreCase(l.getStatus()))
 

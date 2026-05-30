@@ -64,9 +64,9 @@ public final class UserOnboardingEvaluator {
             return false;
         }
         // SurePass verified path — government DB confirmed, no image URLs required
-        if (user.isKycSurepassVerified()) {
-            return true;
-        }
+        // if (user.isKycSurepassVerified()) {
+        //     return true;
+        // }
         // Manual upload path — both S3 image URLs must be present
         return hasText(user.getKycDocumentImageUrl())
                 && hasText(user.getKycSelfieImageUrl());

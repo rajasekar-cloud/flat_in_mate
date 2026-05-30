@@ -26,7 +26,21 @@ public class MatchService {
         match.setSeekerId(seekerId);
         match.setOwnerId(ownerId);
         match.setListingId(listingId);
-        match.setStatus("PENDING");
+        
+        // Default to REQUEST_SENT for formal join requests
+        match.setStatus("REQUEST_SENT"); 
+        
+        match.setCreatedAt(LocalDateTime.now().toString());
+        match.setUpdatedAt(LocalDateTime.now().toString());
+        return matchRepository.save(match);
+    }
+
+    public Match markAsInterested(String seekerId, String ownerId) {
+        Match match = new Match();
+        match.setMatchId(UUID.randomUUID().toString());
+        match.setSeekerId(seekerId);
+        match.setOwnerId(ownerId);
+        match.setStatus("INTERESTED");
         match.setCreatedAt(LocalDateTime.now().toString());
         match.setUpdatedAt(LocalDateTime.now().toString());
         return matchRepository.save(match);
@@ -34,9 +48,9 @@ public class MatchService {
 
     public Match approveMatch(String seekerId, String ownerId) {
         Match match = matchRepository.findBySeekerIdAndOwnerId(seekerId, ownerId)
-                .orElseThrow(() -> new RuntimeException("Match request not found"));
+                .orElseThrow(() -> new RuntimeException("Match record not found"));
 
-        match.setStatus("APPROVED");
+        match.setStatus("MATCHED"); // Figma: It's a match!
         match.setUpdatedAt(LocalDateTime.now().toString());
         Match saved = matchRepository.save(match);
 
@@ -45,69 +59,33 @@ public class MatchService {
         return saved;
     }
 
-    public List<Match> getMyMatches(String userId) {
-        return matchRepository.findByUserId(userId);
-    }
-
-    public List<MatchSearchResult> searchMatches(String userId, String query) {
-        return matchRepository.findByUserId(userId).stream()
-                .map(match -> toSearchResult(userId, match))
-                .filter(result -> matchesResult(result, query))
+    public List<MatchResponse> getMyMatches(String userId) {
+        return matchRepository.findBySeekerId(userId).stream()
+                .map(m -> convertToResponse(m, userId))
                 .toList();
     }
 
-    private MatchSearchResult toSearchResult(String currentUserId, Match match) {
-        String otherUserId = currentUserId.equals(match.getSeekerId())
-                ? match.getOwnerId()
-                : match.getSeekerId();
+    private MatchResponse convertToResponse(Match match, String currentUserId) {
+        // Determine the ID of the person the current user matched with
+        String otherUserId = match.getSeekerId().equals(currentUserId) ? match.getOwnerId() : match.getSeekerId();
+        var otherUser = userRepository.findById(otherUserId).orElse(null);
 
-        User otherUser = userRepository.findById(otherUserId).orElse(null);
-        Listing listing = null;
-        if (match.getListingId() != null) {
-            try {
-                listing = listingService.getListing(match.getListingId());
-            } catch (RuntimeException ignored) {
-                listing = null;
-            }
+        MatchResponse resp = new MatchResponse();
+        resp.setMatchId(match.getMatchId());
+        resp.setOtherUserId(otherUserId);
+        resp.setListingId(match.getListingId());
+        resp.setStatus(match.getStatus());
+        resp.setCreatedAt(match.getCreatedAt());
+
+        if (otherUser != null) {
+            String fullName = (otherUser.getFirstName() != null ? otherUser.getFirstName() : "") + " " + 
+                              (otherUser.getLastName() != null ? otherUser.getLastName() : "");
+            resp.setOtherUserName(fullName.trim().isEmpty() ? "Flatmate User" : fullName.trim());
+            resp.setOtherUserProfilePic(otherUser.getProfilePic());
+        } else {
+            resp.setOtherUserName("Unknown User");
         }
 
-        MatchSearchResult result = new MatchSearchResult();
-        result.setMatch(match);
-        result.setOtherUserId(otherUserId);
-        result.setOtherUserName(displayName(otherUser, otherUserId));
-        result.setOtherUserProfilePic(otherUser != null ? otherUser.getProfilePic() : null);
-        result.setListing(listing);
-        return result;
-    }
-
-    private boolean matchesResult(MatchSearchResult result, String query) {
-        if (query == null || query.isBlank()) {
-            return true;
-        }
-
-        String q = query.toLowerCase();
-        Listing listing = result.getListing();
-        return contains(result.getOtherUserName(), q)
-                || contains(result.getOtherUserId(), q)
-                || contains(result.getMatch().getStatus(), q)
-                || (listing != null && listingService.matchesSearch(listing, query));
-    }
-
-    private String displayName(User user, String fallback) {
-        if (user == null) {
-            return fallback;
-        }
-
-        String first = user.getFirstName();
-        String last = user.getLastName();
-        if (first != null && last != null) return (first + " " + last).trim();
-        if (first != null) return first;
-        if (last != null) return last;
-        if (user.getName() != null) return user.getName();
-        return fallback;
-    }
-
-    private boolean contains(String value, String query) {
-        return value != null && value.toLowerCase().contains(query);
+        return resp;
     }
 }

@@ -23,103 +23,117 @@
     {
       "name": "1. Health",
       "item": [
-        { "name": "Get Health Status", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/health" } } }
+        {
+          "name": "Get Health Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
       ]
     },
     {
       "name": "2. Auth",
       "item": [
-        { "name": "Send OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/send" } } },
-        { "name": "Verify OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\", \"otp\": \"123456\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/verify" } } },
-        { "name": "Refresh Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"refreshToken\": \"{{refreshToken}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/refresh" } } },
-        { "name": "Set Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"SEEKER\"}" }, "url": { "raw": "{{baseUrl}}/auth/set-role" } } },
-        { "name": "Switch Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/auth/switch-role" } } }
+        { "name": "Send OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/send", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "send"] } } },
+        { "name": "Verify OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\", \"otp\": \"123456\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] } } },
+        { "name": "Refresh Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"refreshToken\": \"{{refreshToken}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] } } },
+        { "name": "Set Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"SEEKER\"}" }, "url": { "raw": "{{baseUrl}}/auth/set-role", "host": ["{{baseUrl}}"], "path": ["auth", "set-role"] } } },
+        { "name": "Switch Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/auth/switch-role", "host": ["{{baseUrl}}"], "path": ["auth", "switch-role"] } } }
       ]
     },
     {
       "name": "3. User Profile",
       "item": [
-        { "name": "Get Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}" } } },
-        { "name": "Update Profile", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"firstName\": \"Raj\"}" }, "url": { "raw": "{{baseUrl}}/profiles" } } },
-        { "name": "Register As Owner", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/owner" } } },
-        { "name": "Get Role History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/role-history" } } },
-        { "name": "Submit Manual KYC Images", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"documentType\":\"AADHAR_CARD\", \"documentImageUrl\":\"url1\", \"selfieImageUrl\":\"url2\"}" }, "url": { "raw": "{{baseUrl}}/profiles/kyc" } } },
-        { "name": "Delete KYC Asset", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc?type=document" } } },
-        { "name": "Get KYC Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=aadhar.jpg&type=document" } } },
-        { "name": "Get KYC View URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/view-url?type=SELFIE" } } }
+        { "name": "Get User Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "profile", "{{userId}}"] } } },
+        { "name": "Update Profile with Hobbies", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"bio\": \"Looking for a quiet place\", \"hobbies\": [\"Cricket\", \"Workout\", \"Reading\"]}" }, "url": { "raw": "{{baseUrl}}/users/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "profile", "{{userId}}"] } } },
+        { "name": "Update Profile", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"firstName\": \"Raj\"}" }, "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] } } },
+        { "name": "Register As Owner", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/owner", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "owner"] } } },
+        { "name": "Get Role History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/role-history", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "role-history"] } } },
+        { "name": "Submit Manual KYC Images", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"documentType\":\"AADHAR_CARD\", \"documentImageUrl\":\"url1\", \"selfieImageUrl\":\"url2\"}" }, "url": { "raw": "{{baseUrl}}/profiles/kyc", "host": ["{{baseUrl}}"], "path": ["profiles", "kyc"] } } },
+        { "name": "Delete KYC Asset", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc?type=document", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "kyc"], "query": [{ "key": "type", "value": "document" }] } } },
+        { "name": "Get KYC Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/upload-url?fileName=aadhar.jpg&type=document", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "kyc", "upload-url"], "query": [{ "key": "fileName", "value": "aadhar.jpg" }, { "key": "type", "value": "document" }] } } },
+        { "name": "Get KYC View URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/kyc/view-url?type=SELFIE", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "kyc", "view-url"], "query": [{ "key": "type", "value": "SELFIE" }] } } }
       ]
     },
     {
       "name": "4. KYC (Automated)",
       "item": [
-        { "name": "Aadhaar: Verify Offline (ZIP)", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [ { "key": "userId", "value": "{{userId}}", "type": "text" }, { "key": "file", "type": "file" }, { "key": "shareCode", "value": "1234", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/profiles/kyc/aadhaar/verify-offline" } } },
-        { "name": "DigiLocker: Get Auth URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/auth-url?userId={{userId}}" } } },
-        { "name": "DigiLocker: Verify Code", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/verify?userId={{userId}}&code=AUTH_CODE" } } }
+        { "name": "Aadhaar: Verify Offline (ZIP)", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [ { "key": "userId", "value": "{{userId}}", "type": "text" }, { "key": "file", "type": "file" }, { "key": "shareCode", "value": "1234", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/profiles/kyc/aadhaar/verify-offline", "host": ["{{baseUrl}}"], "path": ["profiles", "kyc", "aadhaar", "verify-offline"] } } },
+        { "name": "DigiLocker: Get Auth URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/auth-url?userId={{userId}}", "host": ["{{baseUrl}}"], "path": ["profiles", "kyc", "digilocker", "auth-url"], "query": [{ "key": "userId", "value": "{{userId}}" }] } } },
+        { "name": "DigiLocker: Verify Code", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/kyc/digilocker/verify?userId={{userId}}&code=AUTH_CODE", "host": ["{{baseUrl}}"], "path": ["profiles", "kyc", "digilocker", "verify"], "query": [{ "key": "userId", "value": "{{userId}}" }, { "key": "code", "value": "AUTH_CODE" }] } } }
       ]
     },
     {
       "name": "5. Listings",
       "item": [
-        { "name": "Save as Draft", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Draft Flat\"}" }, "url": { "raw": "{{baseUrl}}/listings/draft" } } },
-        { "name": "Publish (Validate 5 Photos)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Live Flat\", \"photos\":[\"p1\",\"p2\",\"p3\",\"p4\",\"p5\"]}" }, "url": { "raw": "{{baseUrl}}/listings" } } },
-        { "name": "Update Listing", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"propertyName\":\"Updated Name\"}" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
-        { "name": "Deactivate Listing", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
-        { "name": "Get All Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings" } } },
-        { "name": "Get Listing by ID", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}" } } },
-        { "name": "Get Owner Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/{{userId}}" } } },
-        { "name": "Get My Listings (JWT Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/mine" } } },
-        { "name": "Get My Listings Alias (JWT Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/me" } } },
-        { "name": "Search My Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/mine/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
-        { "name": "Get Single Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=room.jpg" } } },
-        { "name": "Get Bulk Upload URLs", "request": { "method": "POST", "body": { "mode": "raw", "raw": "[\"p1.jpg\",\"p2.jpg\"]" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/bulk-upload-urls" } } }
+        { "name": "Save as Draft", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Draft Flat\"}" }, "url": { "raw": "{{baseUrl}}/listings/draft", "host": ["{{baseUrl}}"], "path": ["listings", "draft"] } } },
+        { "name": "Publish (Validate 5 Photos)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"ownerId\":\"{{userId}}\", \"propertyName\":\"Live Flat\", \"photos\":[\"p1\",\"p2\",\"p3\",\"p4\",\"p5\"]}" }, "url": { "raw": "{{baseUrl}}/listings", "host": ["{{baseUrl}}"], "path": ["listings"] } } },
+        { "name": "Update Listing", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"propertyName\":\"Updated Name\"}" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] } } },
+        { "name": "Deactivate Listing", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] } } },
+        { "name": "Get All Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings", "host": ["{{baseUrl}}"], "path": ["listings"] } } },
+        { "name": "Get Listing by ID", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}"] } } },
+        { "name": "Get Owner Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/owner/{{userId}}", "host": ["{{baseUrl}}"], "path": ["listings", "owner", "{{userId}}"] } } },
+        { "name": "Get Single Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/upload-url?fileName=room.jpg", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}", "upload-url"], "query": [{ "key": "fileName", "value": "room.jpg" }] } } },
+        { "name": "Get Bulk Upload URLs", "request": { "method": "POST", "body": { "mode": "raw", "raw": "[\"p1.jpg\",\"p2.jpg\"]" }, "url": { "raw": "{{baseUrl}}/listings/{{listingId}}/bulk-upload-urls", "host": ["{{baseUrl}}"], "path": ["listings", "{{listingId}}", "bulk-upload-urls"] } } },
+        { "name": "Search Listings (Multi-Field)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"city\": \"Bangalore\", \"maxRent\": 25000.0, \"furnishingStatus\": \"FULLY_FURNISHED\"}" }, "url": { "raw": "{{baseUrl}}/listings/search", "host": ["{{baseUrl}}"], "path": ["listings", "search"] } } }
       ]
     },
     {
-      "name": "6. Location",
+      "name": "6. Moderation",
       "item": [
-        { "name": "Search Nearby (with Filters)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/location/nearby?lat=11.01&lng=76.95&radius=10&minRent=5000" } } }
+        { "name": "Block User", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"blockerId\": \"{{userId}}\", \"blockedId\": \"target_user_123\"}" }, "url": { "raw": "{{baseUrl}}/moderation/block", "host": ["{{baseUrl}}"], "path": ["moderation", "block"] } } },
+        { "name": "Report Content", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"reporterId\": \"{{userId}}\", \"reportedUserId\": \"target_user_123\", \"reason\": \"SPAM\", \"details\": \"User is posting fake listings\"}" }, "url": { "raw": "{{baseUrl}}/moderation/report", "host": ["{{baseUrl}}"], "path": ["moderation", "report"] } } }
       ]
     },
     {
-      "name": "7. Swipes",
+      "name": "7. Location",
       "item": [
-        { "name": "Record Swipe", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{userId}}\", \"listingId\":\"{{listingId}}\", \"type\":\"RIGHT\"}" }, "url": { "raw": "{{baseUrl}}/swipes" } } },
-        { "name": "Get My Swipe IDs (History)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/my-swipes?seekerId={{userId}}" } } },
-        { "name": "Search Liked Listings", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/liked/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
-        { "name": "Get Interested Seekers (Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/listing/{{listingId}}/interests" } } }
+        { "name": "Search Nearby (with Filters)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/location/nearby?lat=11.01&lng=76.95&radius=10&minRent=5000", "host": ["{{baseUrl}}"], "path": ["location", "nearby"], "query": [{ "key": "lat", "value": "11.01" }, { "key": "lng", "value": "76.95" }, { "key": "radius", "value": "10" }, { "key": "minRent", "value": "5000" }] } } }
       ]
     },
     {
-      "name": "8. Matches",
+      "name": "8. Swipes",
       "item": [
-        { "name": "Approve Match", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/approve" } } },
-        { "name": "Force Create Match (Debug)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/create" } } },
-        { "name": "Search Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/search?query=Live", "query": [ { "key": "query", "value": "Live" } ] } } },
-        { "name": "Get My Active Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/{{userId}}" } } }
+        { "name": "Record Swipe", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{userId}}\", \"listingId\":\"{{listingId}}\", \"type\":\"RIGHT\"}" }, "url": { "raw": "{{baseUrl}}/swipes", "host": ["{{baseUrl}}"], "path": ["swipes"] } } },
+        { "name": "Get My Swipe IDs (History)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/my-swipes?seekerId={{userId}}", "host": ["{{baseUrl}}"], "path": ["swipes", "my-swipes"], "query": [{ "key": "seekerId", "value": "{{userId}}" }] } } },
+        { "name": "Get Interested Seekers (Owner)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/swipes/listing/{{listingId}}/interests", "host": ["{{baseUrl}}"], "path": ["swipes", "listing", "{{listingId}}", "interests"] } } }
       ]
     },
     {
-      "name": "9. Chat",
+      "name": "9. Matches",
       "item": [
-        { "name": "Get History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/{{matchId}}/history" } } },
-        { "name": "Mark as Read", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"s1\", \"ownerId\":\"o1\", \"role\":\"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/chat/read" } } },
-        { "name": "Search Chat Contacts", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/search?query=Raj", "query": [ { "key": "query", "value": "Raj" } ] } } },
-        { "name": "Get Chat Media Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/upload-url?fileName=img.jpg" } } }
+        { "name": "Create Match Request", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\": \"{{userId}}\", \"ownerId\": \"owner_123\", \"listingId\": \"listing_123\"}" }, "url": { "raw": "{{baseUrl}}/matches/create", "host": ["{{baseUrl}}"], "path": ["matches", "create"] } } },
+        { "name": "Mark as Interested", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\": \"{{userId}}\", \"ownerId\": \"owner_123\"}" }, "url": { "raw": "{{baseUrl}}/matches/interested", "host": ["{{baseUrl}}"], "path": ["matches", "interested"] } } },
+        { "name": "Approve Match", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"{{seekerId}}\", \"ownerId\":\"{{ownerId}}\"}" }, "url": { "raw": "{{baseUrl}}/matches/approve", "host": ["{{baseUrl}}"], "path": ["matches", "approve"] } } },
+        { "name": "Get My Active Matches", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/matches/{{userId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{userId}}"] } } }
+      ]
+    },
+    {
+      "name": "10. Chat",
+      "item": [
+        { "name": "Get History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/{{matchId}}/history", "host": ["{{baseUrl}}"], "path": ["chat", "{{matchId}}", "history"] } } },
+        { "name": "Mark as Read", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"seekerId\":\"s1\", \"ownerId\":\"o1\", \"role\":\"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/chat/read", "host": ["{{baseUrl}}"], "path": ["chat", "read"] } } },
+        { "name": "Get Chat Media Upload URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/chat/upload-url?fileName=img.jpg", "host": ["{{baseUrl}}"], "path": ["chat", "upload-url"], "query": [{ "key": "fileName", "value": "img.jpg" }] } } }
       ]
     },
     {
       "name": "10. Notifications",
       "item": [
-        { "name": "Save Device Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"token\":\"FCM_TOKEN\"}" }, "url": { "raw": "{{baseUrl}}/notifications/token" } } },
-        { "name": "Send Direct Push (Test)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"title\":\"Hello\", \"body\":\"World\"}" }, "url": { "raw": "{{baseUrl}}/notifications/send" } } },
-        { "name": "Get Inbox", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/notifications/inbox/{{userId}}" } } }
+        { "name": "Save Device Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"token\":\"FCM_TOKEN\"}" }, "url": { "raw": "{{baseUrl}}/notifications/token", "host": ["{{baseUrl}}"], "path": ["notifications", "token"] } } },
+        { "name": "Send Direct Push (Test)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"title\":\"Hello\", \"body\":\"World\"}" }, "url": { "raw": "{{baseUrl}}/notifications/send", "host": ["{{baseUrl}}"], "path": ["notifications", "send"] } } },
+        { "name": "Get Inbox", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/notifications/inbox/{{userId}}", "host": ["{{baseUrl}}"], "path": ["notifications", "inbox", "{{userId}}"] } } }
       ]
     },
     {
       "name": "11. Payments",
       "item": [
-        { "name": "Create Subscription", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"planId\":\"premium\"}" }, "url": { "raw": "{{baseUrl}}/payments/subscribe" } } },
-        { "name": "Webhook (Simulate Callback)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{}" }, "url": { "raw": "{{baseUrl}}/payments/webhook" } } }
+        { "name": "Create Subscription", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\", \"planId\":\"premium\"}" }, "url": { "raw": "{{baseUrl}}/payments/subscribe", "host": ["{{baseUrl}}"], "path": ["payments", "subscribe"] } } },
+        { "name": "Webhook (Simulate Callback)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{}" }, "url": { "raw": "{{baseUrl}}/payments/webhook", "host": ["{{baseUrl}}"], "path": ["payments", "webhook"] } } }
       ]
     }
   ]

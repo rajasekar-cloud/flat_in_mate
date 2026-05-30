@@ -31,6 +31,7 @@ public class UserProfileService {
         if (profileUpdates.getGender() != null) existingUser.setGender(profileUpdates.getGender());
         if (profileUpdates.getProfilePic() != null) existingUser.setProfilePic(profileUpdates.getProfilePic());
         if (profileUpdates.getBio() != null) existingUser.setBio(profileUpdates.getBio());
+        if (profileUpdates.getHobbies() != null) existingUser.setHobbies(profileUpdates.getHobbies());
         if (profileUpdates.getName() != null) existingUser.setName(profileUpdates.getName()); // Legacy fallback
         
         // Seeker Profile Updates (Deep Partial Update)
@@ -108,8 +109,11 @@ public class UserProfileService {
         user.setKycDocumentType(normalizeDocumentType(request.getDocumentType()));
         user.setKycDocumentImageUrl(request.getDocumentImageUrl().trim());
         user.setKycSelfieImageUrl(request.getSelfieImageUrl().trim());
-        // kycComplete is intentionally NOT set here.
-        // Only SurePass verification sets kycComplete = true.
+        // Temporarily set kycComplete=true when images are uploaded, to allow users to proceed with onboarding while they complete digilocker verification.
+        // If the user doesn't complete digilocker verification within a reasonable time, we can run a scheduled job to reset kycComplete=false for users with uploaded images but no verified identity.
+        user.setKycComplete(true);
+        user.setKycCompletedAt(LocalDateTime.now().toString());
+        updateOnboardingStatus(user);   
         userRepository.save(user);
     }
 

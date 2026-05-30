@@ -118,4 +118,11 @@ public class ListingController {
         }
         return userId;
     }
+
+    @PostMapping("/search")
+    public ResponseEntity<List<Listing>> search(
+            @RequestBody Listing filters,
+            @RequestParam(required = false) String userId) {
+        return ResponseEntity.ok(listingService.searchListings(filters, userId));
+    }
 }

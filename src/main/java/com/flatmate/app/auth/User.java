@@ -37,6 +37,7 @@ public class User {
     private String kycCompletedAt;
     private String kycVerifiedName;
     private boolean kycSurepassVerified;
+    private java.util.Set<String> hobbies;
 
     // Getters
     public String getUserId() { return userId; }
@@ -65,6 +66,7 @@ public class User {
     public String getKycCompletedAt() { return kycCompletedAt; }
     public String getKycVerifiedName() { return kycVerifiedName; }
     public boolean isKycSurepassVerified() { return kycSurepassVerified; }
+    public java.util.Set<String> getHobbies() { return hobbies; }
 
     // Setters
     public void setUserId(String userId) { this.userId = userId; }
@@ -93,6 +95,7 @@ public class User {
     public void setKycCompletedAt(String kycCompletedAt) { this.kycCompletedAt = kycCompletedAt; }
     public void setKycVerifiedName(String kycVerifiedName) { this.kycVerifiedName = kycVerifiedName; }
     public void setKycSurepassVerified(boolean kycSurepassVerified) { this.kycSurepassVerified = kycSurepassVerified; }
+    public void setHobbies(java.util.Set<String> hobbies) { this.hobbies = hobbies; }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("PK")

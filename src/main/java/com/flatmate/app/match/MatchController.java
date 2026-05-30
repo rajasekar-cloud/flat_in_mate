@@ -22,6 +22,13 @@ public class MatchController {
         return ResponseEntity.ok(matchService.approveMatch(seekerId, ownerId));
     }
 
+    @PostMapping("/interested")
+    public ResponseEntity<Match> markInterested(@RequestBody Map<String, String> request) {
+        String seekerId = request.get("seekerId");
+        String ownerId = request.get("ownerId");
+        return ResponseEntity.ok(matchService.markAsInterested(seekerId, ownerId));
+    }
+
     @PostMapping("/create")
     public ResponseEntity<Match> createMatch(@RequestBody Map<String, String> request) {
         String seekerId = request.get("seekerId");
@@ -31,7 +38,7 @@ public class MatchController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<List<Match>> getMatches(@PathVariable String userId) {
+    public ResponseEntity<List<MatchResponse>> getMatches(@PathVariable String userId) {
         return ResponseEntity.ok(matchService.getMyMatches(userId));
     }
 

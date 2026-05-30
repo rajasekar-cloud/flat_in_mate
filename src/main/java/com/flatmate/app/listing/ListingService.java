@@ -34,6 +34,7 @@ public class ListingService {
     private final UserRepository userRepository;
     private final S3Presigner s3Presigner;
     private final S3Client s3Client;
+    private final com.flatmate.app.moderation.ModerationRepository moderationRepository;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
@@ -343,6 +344,69 @@ public class ListingService {
             return normalizeKey(normalizedPath);
         } catch (IllegalArgumentException e) {
             return normalizeKey(fileUrl);
+        }
+    }
+
+    public List<Listing> searchListings(Listing filters, String currentUserId) {
+        // ✅ Get blocked users
+        final List<String> blockedUserIds = (currentUserId != null && !currentUserId.isEmpty())
+                ? moderationRepository.getBlockedUserIds(currentUserId)
+                : new ArrayList<>();
+
+        return listingRepository.findAll().stream()
+                .filter(l -> "PUBLISHED".equalsIgnoreCase(l.getStatus()))
+
+                // 🛡️ Safety: Hide blocked users
+                .filter(l -> !blockedUserIds.contains(l.getOwnerId()))
+                .filter(l -> currentUserId == null || !currentUserId.equals(l.getOwnerId()))
+                
+                // 📍 Location Filters
+                .filter(l -> filters.getCity() == null || filters.getCity().equalsIgnoreCase(l.getCity()))
+                .filter(l -> filters.getDistrict() == null || filters.getDistrict().equalsIgnoreCase(l.getDistrict()))
+                
+                // 🏠 Property Type & Furnishing
+                .filter(l -> filters.getPlaceType() == null || filters.getPlaceType().equalsIgnoreCase(l.getPlaceType()))
+                .filter(l -> filters.getRoomType() == null || filters.getRoomType().equalsIgnoreCase(l.getRoomType()))
+                .filter(l -> filters.getFurnishingStatus() == null || filters.getFurnishingStatus().equalsIgnoreCase(l.getFurnishingStatus()))
+                
+                // 🏢 Floor Preference (Figma: Ground, 1st, 2nd & Above)
+                .filter(l -> filters.getPropertyOnFloor() == null || filters.getPropertyOnFloor().equalsIgnoreCase(l.getPropertyOnFloor()))
+                
+                // 💰 Rent Range
+                .filter(l -> filters.getMinRent() == null || (l.getRent() != null && l.getRent() >= filters.getMinRent()))
+                .filter(l -> filters.getMaxRent() == null || (l.getRent() != null && l.getRent() <= filters.getMaxRent()))
+                
+                // ✨ Amenities (Figma: Gym, Kitchen, Wi-Fi, etc. - Must contain all selected)
+                .filter(l -> filters.getAmenities() == null || filters.getAmenities().isEmpty() || 
+                        (l.getAmenities() != null && l.getAmenities().containsAll(filters.getAmenities())))
+                
+                // 📅 Availability (Figma: Immediately, 7 days, etc.)
+                .filter(l -> isAvailableWithinRange(l.getAvailableFrom(), filters.getAvailableFrom()))
+                
+                // 👥 Preferences
+                .filter(l -> filters.getPetsAllowed() == null || filters.getPetsAllowed().equals(l.getPetsAllowed()))
+                .filter(l -> filters.getGenderPreference() == null || "ANY".equalsIgnoreCase(l.getGenderPreference()) || 
+                        filters.getGenderPreference().equalsIgnoreCase(l.getGenderPreference()))
+                .toList();
+    }
+
+    private boolean isAvailableWithinRange(String listingDateStr, String filterValue) {
+        if (filterValue == null || filterValue.isBlank() || "Any Time".equalsIgnoreCase(filterValue)) return true;
+        if (listingDateStr == null || listingDateStr.isBlank()) return false;
+        
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime availableDate = LocalDateTime.parse(listingDateStr);
+            
+            return switch (filterValue.trim().toUpperCase()) {
+                case "IMMEDIATELY" -> availableDate.isBefore(now.plusDays(1));
+                case "WITHIN 7 DAYS" -> availableDate.isBefore(now.plusDays(7));
+                case "WITHIN 15 DAYS" -> availableDate.isBefore(now.plusDays(15));
+                case "WITHIN 1 MONTH" -> availableDate.isBefore(now.plusMonths(1));
+                default -> true;
+            };
+        } catch (Exception e) {
+            return true; // Fallback if date parsing fails
         }
     }
 
