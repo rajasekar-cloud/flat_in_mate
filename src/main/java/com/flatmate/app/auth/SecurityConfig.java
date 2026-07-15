@@ -39,6 +39,7 @@ public class SecurityConfig {
                                                 // Public endpoints — no token required
                                                 .requestMatchers(
                                                                 "/health",
+                                                                "/error",
                                                                 "/auth/otp/send",
                                                                 "/auth/otp/verify",
                                                                 "/auth/refresh",

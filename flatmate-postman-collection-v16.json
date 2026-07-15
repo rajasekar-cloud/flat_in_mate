@@ -9,16 +9,43 @@
     { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
     { "key": "token", "value": "", "type": "string" },
     { "key": "refreshToken", "value": "", "type": "string" },
-    { "key": "userId", "value": "+916379091283", "type": "string" },
+    { "key": "userId", "value": "deployment-test-user", "type": "string" },
     { "key": "listingId", "value": "listing_001", "type": "string" },
     { "key": "matchId", "value": "match_001", "type": "string" },
-    { "key": "seekerId", "value": "+910000000000", "type": "string" },
-    { "key": "ownerId", "value": "+916379091283", "type": "string" }
+    { "key": "seekerId", "value": "deployment-test-seeker", "type": "string" },
+    { "key": "ownerId", "value": "deployment-test-owner", "type": "string" }
   ],
   "auth": {
     "type": "bearer",
     "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "  pm.request.headers.upsert({ key: 'Content-Type', value: 'application/json' });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.url.getPath().endsWith('/auth/otp/verify') && pm.response.code === 200) {",
+          "  const auth = pm.response.json();",
+          "  if (auth.accessToken) pm.collectionVariables.set('token', auth.accessToken);",
+          "  if (auth.refreshToken) pm.collectionVariables.set('refreshToken', auth.refreshToken);",
+          "  if (auth.userId) pm.collectionVariables.set('userId', auth.userId);",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "1. Health",
@@ -26,6 +53,7 @@
         {
           "name": "Get Health Status",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/health",
@@ -39,9 +67,9 @@
     {
       "name": "2. Auth",
       "item": [
-        { "name": "Send OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/send", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "send"] } } },
-        { "name": "Verify OTP", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\", \"otp\": \"123456\"}" }, "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] } } },
-        { "name": "Refresh Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"refreshToken\": \"{{refreshToken}}\"}" }, "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] } } },
+        { "name": "Send OTP", "request": { "auth": { "type": "noauth" }, "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/auth/otp/send", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "send"] } } },
+        { "name": "Verify OTP", "request": { "auth": { "type": "noauth" }, "method": "POST", "body": { "mode": "raw", "raw": "{\"phone\": \"{{userId}}\", \"otp\": \"123456\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] } } },
+        { "name": "Refresh Token", "request": { "auth": { "type": "noauth" }, "method": "POST", "body": { "mode": "raw", "raw": "{\"refreshToken\": \"{{refreshToken}}\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] } } },
         { "name": "Set Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"SEEKER\"}" }, "url": { "raw": "{{baseUrl}}/auth/set-role", "host": ["{{baseUrl}}"], "path": ["auth", "set-role"] } } },
         { "name": "Switch Role", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"role\": \"OWNER\"}" }, "url": { "raw": "{{baseUrl}}/auth/switch-role", "host": ["{{baseUrl}}"], "path": ["auth", "switch-role"] } } }
       ]
@@ -49,8 +77,8 @@
     {
       "name": "3. User Profile",
       "item": [
-        { "name": "Get User Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "profile", "{{userId}}"] } } },
-        { "name": "Update Profile with Hobbies", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"bio\": \"Looking for a quiet place\", \"hobbies\": [\"Cricket\", \"Workout\", \"Reading\"]}" }, "url": { "raw": "{{baseUrl}}/users/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "profile", "{{userId}}"] } } },
+        { "name": "Get User Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}"] } } },
+        { "name": "Update Profile with Hobbies", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"bio\": \"Looking for a quiet place\", \"hobbies\": [\"Cricket\", \"Workout\", \"Reading\"]}" }, "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] } } },
         { "name": "Update Profile", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"userId\": \"{{userId}}\", \"firstName\": \"Raj\"}" }, "url": { "raw": "{{baseUrl}}/profiles", "host": ["{{baseUrl}}"], "path": ["profiles"] } } },
         { "name": "Register As Owner", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/owner", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "owner"] } } },
         { "name": "Get Role History", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/profiles/{{userId}}/role-history", "host": ["{{baseUrl}}"], "path": ["profiles", "{{userId}}", "role-history"] } } },
