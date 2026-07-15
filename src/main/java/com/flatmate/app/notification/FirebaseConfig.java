@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 
 /**
  * Initializes the Firebase Admin SDK on startup.
@@ -30,6 +32,9 @@ public class FirebaseConfig {
 
     @Value("${firebase.service-account-path:}")
     private String serviceAccountPath;
+
+    @Value("${firebase.service-account-base64:}")
+    private String serviceAccountBase64;
 
     @PostConstruct
     public void initializeFirebase() {
@@ -59,13 +64,22 @@ public class FirebaseConfig {
     }
 
     private InputStream resolveServiceAccount() throws IOException {
-        // 1. Check explicit path from environment / application.properties
+        // 1. AWS-friendly secret value; avoids writing a service-account file to disk.
+        if (serviceAccountBase64 != null && !serviceAccountBase64.isBlank()) {
+            try {
+                return new ByteArrayInputStream(Base64.getDecoder().decode(serviceAccountBase64));
+            } catch (IllegalArgumentException e) {
+                throw new IOException("FIREBASE_SERVICE_ACCOUNT_BASE64 is not valid base64", e);
+            }
+        }
+
+        // 2. Check explicit path from environment / application.properties
         if (serviceAccountPath != null && !serviceAccountPath.isBlank()) {
             log.info("Loading Firebase credentials from path: {}", serviceAccountPath);
             return new FileInputStream(serviceAccountPath);
         }
 
-        // 2. Fall back to classpath resource
+        // 3. Fall back to classpath resource
         InputStream classpathResource = getClass()
                 .getClassLoader()
                 .getResourceAsStream("firebase-service-account.json");

@@ -8,6 +8,8 @@ firebase-service-account.json
 
 # Maven build output
 target/
+build/
+.aws-sam/
 *.class
 
 # IDE files

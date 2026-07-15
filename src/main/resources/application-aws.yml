@@ -1,0 +1,35 @@
+spring:
+  config:
+    activate:
+      on-profile: aws
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-south-1}
+
+server:
+  forward-headers-strategy: framework
+
+aws:
+  region: ${DYNAMODB_REGION:${AWS_REGION:ap-south-1}}
+  dynamodb:
+    table-name: ${DYNAMODB_TABLE_NAME}
+    initialize-table: false
+  s3:
+    bucket: ${S3_BUCKET}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: INFO
+    com.flatmate.app: INFO

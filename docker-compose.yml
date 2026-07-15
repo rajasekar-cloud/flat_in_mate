@@ -1,55 +1,80 @@
-version: '3.8'
+name: flatmate
 
 services:
   backend:
     build: .
     image: flatmate-app:latest
     container_name: flatmate-backend
-    ports:
-      - "8081:8081"
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION:-ap-south-1}
-      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME:-FlatmateData}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # JWT Secrets should be passed as env vars in CI/CD or .env
-      - JWT_SECRET=${JWT_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
-      - DIGILOCKER_CLIENT_ID=${DIGILOCKER_CLIENT_ID}
-      - DIGILOCKER_CLIENT_SECRET=${DIGILOCKER_CLIENT_SECRET}
-      - DIGILOCKER_REDIRECT_URI=${DIGILOCKER_REDIRECT_URI}
-      - DIGILOCKER_BASE_URL=${DIGILOCKER_BASE_URL}
-      - SUREPASS_TOKEN=${SUREPASS_TOKEN}
+      SPRING_PROFILES_ACTIVE: aws
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
+      DYNAMODB_REGION: ${AWS_REGION:-ap-south-1}
+      DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-FlatmateData}
+      DYNAMODB_INITIALIZE_TABLE: "false"
+      S3_BUCKET: ${S3_BUCKET}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - flatmate-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-stream: backend
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: flatmate-redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - flatmate-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-stream: redis
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: flatmate-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     networks:
       - flatmate-network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-stream: nginx
 
 networks:
   flatmate-network:
     driver: bridge
+
+volumes:
+  redis-data:

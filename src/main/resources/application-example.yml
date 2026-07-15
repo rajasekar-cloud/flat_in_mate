@@ -14,12 +14,15 @@ server:
 
 aws:
   region: ap-south-1
-  access-key: YOUR_AWS_ACCESS_KEY_ID_HERE
-  secret-key: YOUR_AWS_SECRET_ACCESS_KEY_HERE
   dynamodb:
     table-name: FlatmateData
+    initialize-table: true
   s3:
     bucket: flatmate-photos
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
 
 razorpay:
   key-id: YOUR_RAZORPAY_KEY_ID

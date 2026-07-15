@@ -12,12 +12,15 @@ server:
 # DynamoDB / AWS Configuration
 aws:
   region: ${AWS_REGION:ap-south-1}
-  access-key: ${AWS_ACCESS_KEY_ID:}
-  secret-key: ${AWS_SECRET_ACCESS_KEY:}
   dynamodb:
     table-name: ${DYNAMODB_TABLE_NAME:FlatmateData}
+    initialize-table: ${DYNAMODB_INITIALIZE_TABLE:true}
   s3:
     bucket: ${S3_BUCKET:flatmate-photos}
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 # Razorpay Configuration
 razorpay:
@@ -42,3 +45,4 @@ surepass:
 # Alternatively, place firebase-service-account.json in src/main/resources/ (DO NOT commit to git).
 firebase:
   service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
+  service-account-base64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:}
