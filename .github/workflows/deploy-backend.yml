@@ -199,7 +199,7 @@ jobs:
             '{commands: [
               "set -euo pipefail",
               ("sudo install -d -m 0750 " + $release),
-              ("aws s3 cp " + ($uri|@sh) + " " + ($artifact|@sh) + " --region " + ($region|@sh)),
+              ("aws s3 cp " + ($uri|@sh) + " " + ($artifact|@sh) + " --region " + ($region|@sh) + " --only-show-errors"),
               ("sudo tar -xzf " + ($artifact|@sh) + " -C " + ($release|@sh)),
               ("sudo chmod 0755 " + ($release + "/scripts/remote-deploy.sh"|@sh)),
               $deploy,

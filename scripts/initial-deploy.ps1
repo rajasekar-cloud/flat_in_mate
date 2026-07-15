@@ -15,11 +15,41 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 function Invoke-Aws {
     param([Parameter(Mandatory)][string[]]$Arguments)
-    $result = & aws @Arguments
-    if ($LASTEXITCODE -ne 0) {
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell can promote text written by a native command to
+        # stderr into a terminating NativeCommandError when the script uses
+        # ErrorActionPreference=Stop. Capture the real process exit code first.
+        $ErrorActionPreference = "Continue"
+        $result = & aws @Arguments
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    if ($exitCode -ne 0) {
         throw "AWS CLI command failed: aws $($Arguments -join ' ')"
     }
     return $result
+}
+
+function Invoke-AwsOptional {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $result = & aws @Arguments 2>$null
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    return [PSCustomObject]@{
+        ExitCode = $exitCode
+        Output = (($result | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
+    }
 }
 
 function Get-StackOutput {
@@ -54,24 +84,28 @@ try {
     Write-Host "Verifying the AWS SSO session..." -ForegroundColor Cyan
     Invoke-Aws -Arguments @("sts", "get-caller-identity", "--profile", $Profile, "--region", $Region) | Out-Null
 
-    $runtimeType = & aws ssm get-parameter `
-        --name $RuntimeParameterName `
-        --region $Region `
-        --profile $Profile `
-        --query "Parameter.Type" `
-        --output text 2>$null
-    if ($LASTEXITCODE -ne 0 -or $runtimeType -ne "SecureString") {
+    $runtimeLookup = Invoke-AwsOptional -Arguments @(
+        "ssm", "get-parameter",
+        "--name", $RuntimeParameterName,
+        "--region", $Region,
+        "--profile", $Profile,
+        "--query", "Parameter.Type",
+        "--output", "text"
+    )
+    if ($runtimeLookup.ExitCode -ne 0 -or $runtimeLookup.Output -ne "SecureString") {
         throw "Create the SSM SecureString '$RuntimeParameterName' before deployment. It must contain a JWT_SECRET=... line and must not contain AWS access keys."
     }
 
-    $tableStatus = & aws dynamodb describe-table `
-        --table-name $DynamoDbTableName `
-        --region $Region `
-        --profile $Profile `
-        --query "Table.TableStatus" `
-        --output text 2>$null
+    $tableLookup = Invoke-AwsOptional -Arguments @(
+        "dynamodb", "describe-table",
+        "--table-name", $DynamoDbTableName,
+        "--region", $Region,
+        "--profile", $Profile,
+        "--query", "Table.TableStatus",
+        "--output", "text"
+    )
 
-    if ($LASTEXITCODE -ne 0) {
+    if ($tableLookup.ExitCode -ne 0) {
         if (-not $CreateDynamoDbTable) {
             throw "DynamoDB table '$DynamoDbTableName' does not exist. Re-run with -CreateDynamoDbTable only after confirming this is the new testing account."
         }
@@ -91,17 +125,19 @@ try {
         Invoke-Aws -Arguments @("dynamodb", "wait", "table-exists", "--table-name", $DynamoDbTableName, "--region", $Region, "--profile", $Profile) | Out-Null
     }
 
-    $existingBootstrapSetting = & aws cloudformation describe-stacks `
-        --stack-name $BootstrapStackName `
-        --region $Region `
-        --profile $Profile `
-        --query "Stacks[0].Parameters[?ParameterKey=='CreateOidcProvider'].ParameterValue" `
-        --output text 2>$null
+    $bootstrapLookup = Invoke-AwsOptional -Arguments @(
+        "cloudformation", "describe-stacks",
+        "--stack-name", $BootstrapStackName,
+        "--region", $Region,
+        "--profile", $Profile,
+        "--query", "Stacks[0].Parameters[?ParameterKey=='CreateOidcProvider'].ParameterValue",
+        "--output", "text"
+    )
 
-    if ($LASTEXITCODE -eq 0 -and $existingBootstrapSetting -in @("true", "false")) {
+    if ($bootstrapLookup.ExitCode -eq 0 -and $bootstrapLookup.Output -in @("true", "false")) {
         # Preserve stack ownership on every re-run. Switching true to false would
         # delete an OIDC provider that this bootstrap stack originally created.
-        $createOidcProvider = $existingBootstrapSetting
+        $createOidcProvider = $bootstrapLookup.Output
     } else {
         $oidcCount = Invoke-Aws -Arguments @(
             "iam", "list-open-id-connect-providers",
@@ -208,11 +244,15 @@ try {
     Write-Host "Waiting for the instance to register with Systems Manager..." -ForegroundColor Cyan
     $online = $false
     for ($attempt = 1; $attempt -le 30; $attempt++) {
-        $pingStatus = & aws ssm describe-instance-information `
-            --filters "Key=InstanceIds,Values=$instanceId" `
-            --query "InstanceInformationList[0].PingStatus" `
-            --output text --region $Region --profile $Profile 2>$null
-        if ($LASTEXITCODE -eq 0 -and $pingStatus -eq "Online") {
+        $pingLookup = Invoke-AwsOptional -Arguments @(
+            "ssm", "describe-instance-information",
+            "--filters", "Key=InstanceIds,Values=$instanceId",
+            "--query", "InstanceInformationList[0].PingStatus",
+            "--output", "text",
+            "--region", $Region,
+            "--profile", $Profile
+        )
+        if ($pingLookup.ExitCode -eq 0 -and $pingLookup.Output -eq "Online") {
             $online = $true
             break
         }
@@ -231,7 +271,7 @@ try {
     $commands = @(
         "set -euo pipefail",
         "sudo install -d -m 0750 $(ConvertTo-BashSingleQuoted $releaseDirectory)",
-        "aws s3 cp $(ConvertTo-BashSingleQuoted "s3://$deploymentBucket/releases/$artifactName") $(ConvertTo-BashSingleQuoted $remoteArtifact) --region $(ConvertTo-BashSingleQuoted $Region)",
+        "aws s3 cp $(ConvertTo-BashSingleQuoted "s3://$deploymentBucket/releases/$artifactName") $(ConvertTo-BashSingleQuoted $remoteArtifact) --region $(ConvertTo-BashSingleQuoted $Region) --only-show-errors",
         "sudo tar -xzf $(ConvertTo-BashSingleQuoted $remoteArtifact) -C $(ConvertTo-BashSingleQuoted $releaseDirectory)",
         "sudo chmod 0755 $(ConvertTo-BashSingleQuoted "$releaseDirectory/scripts/remote-deploy.sh")",
         ($remoteDeploy -join " "),
@@ -251,10 +291,10 @@ try {
         "--region", $Region, "--profile", $Profile
     )).Trim()
 
-    Invoke-Aws -Arguments @(
+    $waitResult = Invoke-AwsOptional -Arguments @(
         "ssm", "wait", "command-executed", "--command-id", $commandId,
         "--instance-id", $instanceId, "--region", $Region, "--profile", $Profile
-    ) | Out-Null
+    )
 
     Invoke-Aws -Arguments @(
         "ssm", "get-command-invocation", "--command-id", $commandId,
@@ -262,6 +302,10 @@ try {
         "--query", "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}",
         "--region", $Region, "--profile", $Profile
     ) | Out-Host
+
+    if ($waitResult.ExitCode -ne 0) {
+        throw "The remote deployment command failed. Review the SSM Error output shown above."
+    }
 
     $healthy = $false
     for ($attempt = 1; $attempt -le 30; $attempt++) {
