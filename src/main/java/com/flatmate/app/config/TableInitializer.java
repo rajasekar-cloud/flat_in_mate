@@ -4,6 +4,7 @@ import com.flatmate.app.auth.User;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -12,6 +13,10 @@ import software.amazon.awssdk.services.dynamodb.model.ResourceInUseException;
 
 @Configuration
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        name = "aws.dynamodb.initialize-table",
+        havingValue = "true",
+        matchIfMissing = true)
 public class TableInitializer {
 
     private final DynamoDbEnhancedClient enhancedClient;

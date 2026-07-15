@@ -1,6 +1,10 @@
 # Flat-Sharing App (Modular Monolith)
 
-This is a unified backend application for flat-sharing, organized into modules (packages) and running on port **8080**.
+This is a unified backend application for flat-sharing, organized into modules (packages) and running on port **8081**.
+
+## AWS testing deployment
+
+Use [DEPLOYMENT.md](DEPLOYMENT.md) for the complete AWS account-security, billing-alert, first-deployment, GitHub OIDC, validation, rollback, emergency-stop, and cleanup instructions. The retired EC2 workflow and snapshot-heavy infrastructure template must not be used.
 
 ## Instructions
 

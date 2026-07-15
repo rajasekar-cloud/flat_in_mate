@@ -1,0 +1,361 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Low-cost Flatmate testing backend with EC2, CloudFront HTTPS/WSS, Redis, DynamoDB access, and no load balancer.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: testing
+    AllowedPattern: '^[a-z0-9-]+$'
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  CloudFrontOriginPrefixListId:
+    Type: String
+    Description: AWS-managed com.amazonaws.global.cloudfront.origin-facing prefix list ID.
+  DynamoDbTableName:
+    Type: String
+    Default: FlatmateData
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Default: http://localhost:3000,http://localhost:5173
+  RuntimeSecretsParameterName:
+    Type: String
+    Default: /flatmate/testing/runtime-env
+    Description: Existing SSM SecureString containing newline-separated KEY=VALUE runtime secrets.
+  SwipeEventsQueueName:
+    Type: String
+    Default: swipe-events
+  MatchEventsQueueName:
+    Type: String
+    Default: match-events
+  OriginDomainName:
+    Type: String
+    Default: ''
+    Description: Leave empty on first deployment. Restore scripts set this after an EC2 stop/start changes public DNS.
+
+Conditions:
+  HasOriginDomainOverride: !Not [!Equals [!Ref OriginDomainName, '']]
+
+Resources:
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /flatmate/${EnvironmentName}/containers
+      RetentionInDays: 3
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !Ref AllowedOrigins
+            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+            AllowedHeaders: ['*']
+            ExposedHeaders: [ETag]
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Purpose
+          Value: flatmate-media
+
+  DeploymentBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteDeploymentArtifacts
+            Status: Enabled
+            ExpirationInDays: 3
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 1
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Purpose
+          Value: flatmate-deployments
+
+  SwipeEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref SwipeEventsQueueName
+      MessageRetentionPeriod: 86400
+      ReceiveMessageWaitTimeSeconds: 10
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  MatchEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref MatchEventsQueueName
+      MessageRetentionPeriod: 86400
+      ReceiveMessageWaitTimeSeconds: 10
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub flatmate-${EnvironmentName}-runtime
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: FlatmateRuntimeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DynamoDbSingleTable
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDbTableName}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDbTableName}/index/*
+              - Sid: MediaObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub ${MediaBucket.Arn}/*
+              - Sid: ReadDeploymentArtifacts
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub ${DeploymentBucket.Arn}/*
+              - Sid: PublishApplicationEvents
+                Effect: Allow
+                Action:
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:SendMessage
+                Resource:
+                  - !GetAtt SwipeEventsQueue.Arn
+                  - !GetAtt MatchEventsQueue.Arn
+              - Sid: ReadRuntimeConfiguration
+                Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${RuntimeSecretsParameterName}
+              - Sid: WriteContainerLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource: !GetAtt ApplicationLogGroup.Arn
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApplicationInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub flatmate-${EnvironmentName}-runtime
+      Roles:
+        - !Ref ApplicationRole
+
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudFront-only HTTP access to the Flatmate testing origin
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: HTTP from the AWS CloudFront origin-facing network only
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !Ref CloudFrontOriginPrefixListId
+      SecurityGroupEgress:
+        - Description: HTTPS access to AWS APIs, package repositories, and external application integrations
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - Description: DNS over UDP
+          IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+        - Description: DNS over TCP
+          IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub flatmate-${EnvironmentName}-origin
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApplicationInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref ApplicationInstanceProfile
+      Monitoring: false
+      CreditSpecification:
+        CPUCredits: standard
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 2
+        InstanceMetadataTags: enabled
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref ApplicationSecurityGroup
+          SubnetId: !Ref SubnetId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeSize: 8
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: !Sub flatmate-${EnvironmentName}
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ManagedBy
+          Value: CloudFormation
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf install -y docker tar gzip
+          install -d -m 0755 /usr/local/lib/docker/cli-plugins
+          curl -fsSL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose
+          systemctl enable --now docker
+          systemctl enable --now amazon-ssm-agent
+          install -d -m 0750 /opt/flatmate/releases
+          touch /opt/flatmate/instance-ready
+
+  ApplicationDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub Flatmate ${EnvironmentName} HTTPS and WebSocket endpoint
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: FlatmateEc2Origin
+            DomainName: !If
+              - HasOriginDomainOverride
+              - !Ref OriginDomainName
+              - !GetAtt ApplicationInstance.PublicDnsName
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 60
+              OriginKeepaliveTimeout: 60
+              OriginSSLProtocols: [TLSv1.2]
+        DefaultCacheBehavior:
+          TargetOriginId: FlatmateEc2Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+          Compress: false
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  PublicBaseUrl:
+    Description: Stable HTTPS base URL for REST and SockJS traffic. No trailing slash is required.
+    Value: !Sub https://${ApplicationDistribution.DomainName}
+  WebSocketUrl:
+    Description: Stable native WebSocket endpoint.
+    Value: !Sub wss://${ApplicationDistribution.DomainName}/ws
+  HealthUrl:
+    Value: !Sub https://${ApplicationDistribution.DomainName}/health
+  InstanceId:
+    Value: !Ref ApplicationInstance
+  InstancePublicDnsName:
+    Value: !GetAtt ApplicationInstance.PublicDnsName
+  DistributionId:
+    Value: !Ref ApplicationDistribution
+  MediaBucketName:
+    Value: !Ref MediaBucket
+  DeploymentBucketName:
+    Value: !Ref DeploymentBucket
+  ApplicationLogGroupName:
+    Value: !Ref ApplicationLogGroup
+  RuntimeRoleArn:
+    Value: !GetAtt ApplicationRole.Arn
+  SwipeEventsQueueUrl:
+    Value: !Ref SwipeEventsQueue
+  MatchEventsQueueUrl:
+    Value: !Ref MatchEventsQueue

@@ -1,0 +1,277 @@
+name: Deploy Backend to AWS Testing
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: flatmate-testing-deployment
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  STACK_NAME: ${{ vars.CLOUDFORMATION_STACK_NAME || 'flatmate-testing' }}
+  DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME || 'FlatmateData' }}
+  ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173' }}
+  RUNTIME_PARAMETER_NAME: ${{ vars.RUNTIME_PARAMETER_NAME || '/flatmate/testing/runtime-env' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '17'
+          cache: maven
+
+      - name: Run tests
+        run: mvn --batch-mode test
+
+      - name: Build application JAR
+        run: mvn --batch-mode package -DskipTests
+
+      - name: Authenticate to AWS with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: flatmate-${{ github.run_id }}
+
+      - name: Validate CloudFormation template
+        run: aws cloudformation validate-template --template-body file://template.yaml >/dev/null
+
+      - name: Verify DynamoDB table exists
+        run: |
+          aws dynamodb describe-table \
+            --table-name "$DYNAMODB_TABLE_NAME" \
+            --region "$AWS_REGION" \
+            --query 'Table.TableStatus' \
+            --output text
+
+      - name: Discover low-cost network inputs
+        id: network
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters Name=is-default,Values=true \
+            --query 'Vpcs[0].VpcId' \
+            --output text)
+
+          if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
+            echo "::error::No default VPC exists in $AWS_REGION. The stack intentionally does not create a VPC."
+            exit 1
+          fi
+
+          SUBNET_ID=$(aws ec2 describe-subnets \
+            --filters Name=vpc-id,Values="$VPC_ID" Name=default-for-az,Values=true \
+            --query 'sort_by(Subnets,&AvailabilityZone)[0].SubnetId' \
+            --output text)
+
+          PREFIX_LIST_ID=$(aws ec2 describe-managed-prefix-lists \
+            --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing \
+            --query 'PrefixLists[0].PrefixListId' \
+            --output text)
+
+          if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" || -z "$PREFIX_LIST_ID" || "$PREFIX_LIST_ID" == "None" ]]; then
+            echo "::error::Could not discover a default subnet or the CloudFront origin-facing prefix list."
+            exit 1
+          fi
+
+          echo "vpc_id=$VPC_ID" >> "$GITHUB_OUTPUT"
+          echo "subnet_id=$SUBNET_ID" >> "$GITHUB_OUTPUT"
+          echo "prefix_list_id=$PREFIX_LIST_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy or update CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file template.yaml \
+            --stack-name "$STACK_NAME" \
+            --role-arn "${{ vars.CLOUDFORMATION_ROLE_ARN }}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=testing \
+              VpcId="${{ steps.network.outputs.vpc_id }}" \
+              SubnetId="${{ steps.network.outputs.subnet_id }}" \
+              CloudFrontOriginPrefixListId="${{ steps.network.outputs.prefix_list_id }}" \
+              DynamoDbTableName="$DYNAMODB_TABLE_NAME" \
+              AllowedOrigins="$ALLOWED_ORIGINS" \
+              RuntimeSecretsParameterName="$RUNTIME_PARAMETER_NAME" \
+              OriginDomainName=""
+
+      - name: Read deployment outputs
+        id: outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          stack_output() {
+            aws cloudformation describe-stacks \
+              --stack-name "$STACK_NAME" \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" \
+              --output text
+          }
+
+          echo "instance_id=$(stack_output InstanceId)" >> "$GITHUB_OUTPUT"
+          echo "deployment_bucket=$(stack_output DeploymentBucketName)" >> "$GITHUB_OUTPUT"
+          echo "media_bucket=$(stack_output MediaBucketName)" >> "$GITHUB_OUTPUT"
+          echo "log_group=$(stack_output ApplicationLogGroupName)" >> "$GITHUB_OUTPUT"
+          echo "base_url=$(stack_output PublicBaseUrl)" >> "$GITHUB_OUTPUT"
+          echo "health_url=$(stack_output HealthUrl)" >> "$GITHUB_OUTPUT"
+          echo "websocket_url=$(stack_output WebSocketUrl)" >> "$GITHUB_OUTPUT"
+
+      - name: Create and upload deployment artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT_NAME="flatmate-${GITHUB_SHA}.tar.gz"
+          tar -czf "$ARTIFACT_NAME" \
+            target/*.jar \
+            Dockerfile \
+            docker-compose.yml \
+            nginx \
+            scripts/remote-deploy.sh \
+            scripts/remote-rollback.sh
+          aws s3 cp "$ARTIFACT_NAME" \
+            "s3://${{ steps.outputs.outputs.deployment_bucket }}/releases/$ARTIFACT_NAME" \
+            --only-show-errors
+          echo "name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Systems Manager connectivity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            STATUS=$(aws ssm describe-instance-information \
+              --filters Key=InstanceIds,Values="${{ steps.outputs.outputs.instance_id }}" \
+              --query 'InstanceInformationList[0].PingStatus' \
+              --output text 2>/dev/null || true)
+            if [[ "$STATUS" == "Online" ]]; then
+              exit 0
+            fi
+            echo "Waiting for SSM agent ($attempt/30)..."
+            sleep 10
+          done
+          echo "::error::The EC2 instance did not become available through Systems Manager."
+          exit 1
+
+      - name: Deploy release through Systems Manager
+        id: deploy_release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RELEASE_DIR="/opt/flatmate/releases/${GITHUB_SHA}"
+          ARTIFACT_PATH="/tmp/${{ steps.artifact.outputs.name }}"
+          ARTIFACT_URI="s3://${{ steps.outputs.outputs.deployment_bucket }}/releases/${{ steps.artifact.outputs.name }}"
+
+          printf -v DEPLOY_COMMAND '%q ' \
+            sudo bash "$RELEASE_DIR/scripts/remote-deploy.sh" \
+            "$AWS_REGION" \
+            "$DYNAMODB_TABLE_NAME" \
+            "${{ steps.outputs.outputs.media_bucket }}" \
+            "$RUNTIME_PARAMETER_NAME" \
+            "$ALLOWED_ORIGINS" \
+            "${{ steps.outputs.outputs.log_group }}" \
+            "$RELEASE_DIR"
+
+          jq -n \
+            --arg release "$RELEASE_DIR" \
+            --arg artifact "$ARTIFACT_PATH" \
+            --arg uri "$ARTIFACT_URI" \
+            --arg region "$AWS_REGION" \
+            --arg deploy "$DEPLOY_COMMAND" \
+            '{commands: [
+              "set -euo pipefail",
+              ("sudo install -d -m 0750 " + $release),
+              ("aws s3 cp " + ($uri|@sh) + " " + ($artifact|@sh) + " --region " + ($region|@sh)),
+              ("sudo tar -xzf " + ($artifact|@sh) + " -C " + ($release|@sh)),
+              ("sudo chmod 0755 " + ($release + "/scripts/remote-deploy.sh"|@sh)),
+              $deploy,
+              ("rm -f " + ($artifact|@sh))
+            ]}' > ssm-parameters.json
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.outputs.outputs.instance_id }}" \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy Flatmate ${GITHUB_SHA}" \
+            --parameters file://ssm-parameters.json \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.outputs.outputs.instance_id }}"
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.outputs.outputs.instance_id }}" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
+
+      - name: Verify public health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error "${{ steps.outputs.outputs.health_url }}"; then
+              exit 0
+            fi
+            echo "Waiting for CloudFront health check ($attempt/30)..."
+            sleep 10
+          done
+          echo "::error::Public health endpoint did not become healthy."
+          exit 1
+
+      - name: Verify CORS preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_ORIGIN="${ALLOWED_ORIGINS%%,*}"
+          curl --fail --silent --show-error \
+            --request OPTIONS \
+            --header "Origin: $TEST_ORIGIN" \
+            --header 'Access-Control-Request-Method: GET' \
+            --header 'Access-Control-Request-Headers: Authorization,Content-Type' \
+            --dump-header cors-headers.txt \
+            --output /dev/null \
+            "${{ steps.outputs.outputs.health_url }}"
+          grep -i -F "access-control-allow-origin: $TEST_ORIGIN" cors-headers.txt
+
+      - name: Publish deployment summary
+        if: success()
+        run: |
+          {
+            echo '## Flatmate testing deployment'
+            echo ''
+            echo "- Base URL: ${{ steps.outputs.outputs.base_url }}"
+            echo "- Health URL: ${{ steps.outputs.outputs.health_url }}"
+            echo "- WebSocket URL: ${{ steps.outputs.outputs.websocket_url }}"
+            echo "- Stack: $STACK_NAME"
+            echo "- Region: $AWS_REGION"
+            echo "- Commit: $GITHUB_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show remote failure details
+        if: failure() && steps.deploy_release.outputs.command_id != ''
+        continue-on-error: true
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.deploy_release.outputs.command_id }}" \
+            --instance-id "${{ steps.outputs.outputs.instance_id }}" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'

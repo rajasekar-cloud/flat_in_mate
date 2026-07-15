@@ -1,12 +1,16 @@
-# ---- Run Stage ----
-FROM eclipse-temurin:17-jre-alpine
-WORKDIR /app
-
-# Copy the pre-built jar from the target folder (built by GitHub Actions)
+# The build/test stage runs in CI. This first stage isolates the built artifact
+# so the runtime image contains only Java and the application JAR.
+FROM amazoncorretto:17-alpine AS artifact
+WORKDIR /artifact
 COPY target/*.jar app.jar
+
+FROM amazoncorretto:17-alpine AS runtime
+WORKDIR /app
+COPY --from=artifact /artifact/app.jar /app/app.jar
+
+RUN addgroup -S flatmate && adduser -S flatmate -G flatmate
+USER flatmate
 
 EXPOSE 8081
 
-# Run the application with optimized memory settings for t3.micro (1GB RAM)
-# Reduced heap to 384m to leave room for OS, Redis, and Nginx
-ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xms128m", "-Xmx384m", "-XX:+UseSerialGC", "-jar", "/app/app.jar"]
